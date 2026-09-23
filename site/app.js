@@ -14,6 +14,8 @@ const state = {
   currency:'EUR', euFuel:'petrol95', czFuel:'petrol95', euCountry:'CZ',
   euWindow:'52', gasCountry:'CZ', gasWindow:'all', brentWindow:'all',
   geoCountries:null, geoRegions:null,
+  supply:null,
+  supplyCountry:'EU27', supplyCommodity:'oil', supplyProduct:'petrol95', supplyMapMetric:'Russia', supplyTimelineMetric:'share', supplyWindow:'60',
   modal:{kind:null,id:null,metric:'petrol95',window:'all'}
 };
 
@@ -22,6 +24,8 @@ const qsa = s => [...document.querySelectorAll(s)];
 const fmt = (v,digits=2) => Number.isFinite(v) ? v.toLocaleString('en-GB',{minimumFractionDigits:digits,maximumFractionDigits:digits}) : '—';
 const fuelLabel = k => ({petrol95:'Euro 95 petrol',diesel:'Diesel',lpg:'LPG'})[k] || k;
 const fuelUnit = key => key === 'lpg' || key === 'petrol95' || key === 'diesel' ? (state.currency === 'CZK' ? 'Kč/l' : 'EUR/l') : '';
+const pct = v => Number.isFinite(v) ? `${fmt(v*100,1)}%` : '—';
+const supplyGroupColors = new Map([['Russia','#ff4d5a'],['United States','#ffd166'],['Middle East','#f08c46'],['Norway','#55b8ff'],['EU / intra-EU','#89a5c4'],['North Africa','#c887ff'],['Azerbaijan / Caspian','#f3b7ff'],['United Kingdom','#6ad7a0'],['Other','#7f8794']]);
 const sortBy = (arr,key) => [...arr].sort((a,b)=>(a[key]??Infinity)-(b[key]??Infinity));
 const flagEmoji = code => { const s=String(code||'').toUpperCase(); if(s==='EU'||s==='EU27') return '🇪🇺'; return s.length===2 ? String.fromCodePoint(...[...s].map(c=>127397+c.charCodeAt(0))) : '◇'; };
 const flagImg = (code,label='') => { const s=String(code||'').toLowerCase(); const asset=s==='eu27'||s==='eu'?'eu':s; if(!/^[a-z]{2}$/.test(asset)) return `<span class=\"flag-code\">${String(code||'—')}</span>`; const alt=String(label||code||'').replace(/\"/g,'&quot;'); return `<img class=\"flag-icon\" src=\"https://flagcdn.com/w40/${asset}.png\" alt=\"${alt} flag\" title=\"${alt}\" loading=\"lazy\" decoding=\"async\" referrerpolicy=\"no-referrer\" onerror=\"this.style.display='none';this.nextElementSibling.style.display='inline-flex'\"><span class=\"flag-code\" style=\"display:none\">${String(code||'—').toUpperCase()}</span>`; };
@@ -239,6 +243,99 @@ function renderEntityModal(){
   }
 }
 
+
+function supplyGroupColor(group){return supplyGroupColors.get(group)||'#7f8794';}
+function supplyProductsForCommodity(c){return c==='oil'?[['petrol95','Motor gasoline / petrol 95'],['diesel','Gas/diesel oil'],['lpg','LPG']]:[['all',c==='gas_lng'?'LNG':'Gaseous natural gas']];}
+function supplyKeyForCommodity(c){return c.startsWith('gas_')?'gas': 'oil';}
+function supplySeries(country,commodity,product){
+  if(!state.supply)return [];
+  let source;
+  if(commodity==='gas_pipeline') source=state.supply.gas?.pipeline||{};
+  else if(commodity==='gas_lng') source=state.supply.gas?.lng||{};
+  else source=state.supply.oil?.[product]||{};
+  let series;
+  if(country==='EU27'){
+    const allCodes=EU.map(([code])=>code);
+    const byPeriod=new Map();
+    for(const code of allCodes){
+      const src=source?.[code]?.history||[];
+      for(const row of src){
+        if(!byPeriod.has(row.period))byPeriod.set(row.period,{period:row.period,total:0,groupVolumes:{},partnerVolumes:{}});
+        const out=byPeriod.get(row.period);out.total+=Number(row.total)||0;
+        for(const [g,v] of Object.entries(row.groupVolumes||{}))out.groupVolumes[g]=(out.groupVolumes[g]||0)+(Number(v)||0);
+        for(const p of row.partners||[])out.partnerVolumes[p.code]=(out.partnerVolumes[p.code]||0)+(Number(p.value)||0);
+      }
+    }
+    series=[...byPeriod.values()].sort((a,b)=>a.period.localeCompare(b.period));
+    return series.map(r=>({...r,groupShares:Object.fromEntries(Object.entries(r.groupVolumes).map(([g,v])=>[g,r.total?v/r.total:0])),partners:Object.entries(r.partnerVolumes).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([code,value])=>({code,value,share:r.total?value/r.total:0}))}));
+  }
+  series=source?.[country]?.history||[];
+  return series;
+}
+function supplyLatest(series){return series.at(-1)||null;}
+function supplyName(code){if(code==='EU27')return 'EU-27';return EU_NAMES.get(code)||code;}
+function supplyFormatVolume(v,commodity){if(!Number.isFinite(v))return 'NR';return commodity.startsWith('gas_')?`${fmt(v,0)} TJ`:`${fmt(v,1)} kt`}
+function renderSupplyMetrics(series,commodity,product){
+  const latest=supplyLatest(series),groups=latest?.groupShares||{};
+  const label=commodity.startsWith('gas_')?(commodity==='gas_lng'?'LNG':'Gaseous natural gas'):(fuelLabel(product));
+  qs('#supplyMetrics').innerHTML=[
+    metric('Latest month',latest?.period||'—',label),
+    metric('Total imported',latest?supplyFormatVolume(latest.total,commodity):'—','reported import volume'),
+    metric('Russia',pct(groups['Russia']), 'share of imports · ultimate origin'),
+    metric('United States',pct(groups['United States']), 'share of imports · ultimate origin'),
+    metric('Middle East',pct(groups['Middle East']), 'share of imports · defined group'),
+    metric('Norway',pct(groups['Norway']), 'share of imports · ultimate origin')
+  ].join('');
+}
+function renderSupplyPartners(series,commodity){
+  const latest=supplyLatest(series),tbl=qs('#supplyPartnerTable');
+  if(!latest){tbl.innerHTML='<tbody><tr><td>NO SUPPLY OBSERVATIONS</td></tr></tbody>';return;}
+  const rows=(latest.partners||[]).filter(p=>p.value>0).slice(0,14);
+  tbl.innerHTML=`<thead><tr><th>Origin</th><th class="num">Volume</th><th class="num">Share</th></tr></thead><tbody>${rows.map(p=>`<tr><td>${flagImg(p.code,p.code)} <span>${p.code}</span></td><td class="num">${supplyFormatVolume(p.value,commodity)}</td><td class="num">${pct(p.share)}</td></tr>`).join('')}</tbody>`;
+}
+function renderSupplyMap(series,metric){
+  const el=qs('#supplyMap');if(!el)return;el.innerHTML='';const geo=state.geoCountries||null;
+  if(!geo){el.innerHTML='<div class="empty">Country geometry unavailable.</div>';return;}
+  const latest=supplyLatest(series);const features=(geo.features||[]).filter(f=>EU_SET.has(getCountryCode(f.properties)));const w=el.clientWidth||900,h=540;
+  const svg=d3.select(el).append('svg').attr('viewBox',`0 0 ${w} ${h}`);const projection=d3.geoMercator().fitExtent([[18,18],[w-18,h-18]],{type:'FeatureCollection',features});const path=d3.geoPath(projection);
+  const vals=[];for(const f of features){const code=getCountryCode(f.properties);const s=supplySeries(code,state.supply._uiCommodity||'oil',state.supply._uiProduct||'petrol95').at(-1);const v=s?.groupShares?.[metric];if(Number.isFinite(v))vals.push(v);}
+  const scale=d3.scaleLinear().domain([0,d3.max(vals)||1]).range(['#161c2b','#ff314b']).clamp(true);
+  const byCode=new Map();for(const [code] of EU)byCode.set(code,supplySeries(code,state.supply._uiCommodity||'oil',state.supply._uiProduct||'petrol95').at(-1));
+  svg.selectAll('path.map-country').data(features).join('path').attr('class','map-country').attr('d',path).attr('fill',f=>{const c=getCountryCode(f.properties),v=byCode.get(c)?.groupShares?.[metric];return Number.isFinite(v)?scale(v):'#141b2a';}).on('mousemove',(e,f)=>{const c=getCountryCode(f.properties),r=byCode.get(c),v=r?.groupShares?.[metric];showTip(e,`${flagEmoji(c)} ${supplyName(c)}<br><strong>${pct(v)}</strong><br><span>${metric} · ${r?.period||'—'}</span>`);}).on('mouseleave',hideTip).on('click',(e,f)=>{const c=getCountryCode(f.properties);flash(e.currentTarget);openEntityDashboard('country',c);});
+  // Schematic source-flow arcs: source hubs to countries, using the latest imported volume for the selected group.
+  const hubs={'Russia':[37,57],'United States':[-11,51],'Middle East':[43,29],'Norway':[8,62],'EU / intra-EU':[10,50],'North Africa':[13,31],'Azerbaijan / Caspian':[49,40],'United Kingdom':[-3,55]};
+  if(latest && hubs[metric]){
+    const hub=projection(hubs[metric]);if(hub){const sourceVals=[];for(const f of features){const c=getCountryCode(f.properties),p=supplySeries(c,state.supply._uiCommodity||'oil',state.supply._uiProduct||'petrol95').at(-1);const v=p?.groupVolumes?.[metric];if(Number.isFinite(v)&&v>0)sourceVals.push({c,v,f});}const top=sourceVals.sort((a,b)=>b.v-a.v).slice(0,14);const max=d3.max(top,d=>d.v)||1;svg.append('g').attr('class','supply-flows').selectAll('path').data(top).join('path').attr('d',d=>{const c=path.centroid(d.f);const mx=(hub[0]+c[0])/2;const my=(hub[1]+c[1])/2-45;return `M${hub[0]},${hub[1]} Q${mx},${my} ${c[0]},${c[1]}`;}).attr('fill','none').attr('stroke',supplyGroupColor(metric)).attr('stroke-width',d=>1.2+5*Math.sqrt(d.v/max)).attr('stroke-opacity',0.38).attr('class','supply-flow-line');svg.append('circle').attr('cx',hub[0]).attr('cy',hub[1]).attr('r',7).attr('fill',supplyGroupColor(metric)).attr('class','supply-hub');svg.append('text').attr('x',hub[0]+10).attr('y',hub[1]-8).attr('fill',supplyGroupColor(metric)).attr('font-family','IBM Plex Mono').attr('font-size',10).attr('font-weight',700).text(metric.toUpperCase());}}
+  setSupplyLegend(scale);
+}
+function setSupplyLegend(scale){const el=qs('.supply-map-legend');if(!el)return;el.querySelector('.supply-gradient').style.background='linear-gradient(90deg,#161c2b,#ff314b)';}
+function drawSupplyTimeline(series,metric,commodity){
+  const el=qs('#supplyTimeline');el.innerHTML='';if(!series.length){el.innerHTML='<div class="empty">No supply history is available for this selection. Run the full data refresh.</div>';return;}
+  const data=windowSlice(series,state.supplyWindow),groups=['Russia','United States','Middle East','Norway','North Africa','Azerbaijan / Caspian','United Kingdom','EU / intra-EU','Other'];
+  const width=el.clientWidth||960,height=420,m={t:24,r:24,b:42,l:58},svg=d3.select(el).append('svg').attr('viewBox',`0 0 ${width} ${height}`),x=d3.scaleTime().range([m.l,width-m.r]),y=d3.scaleLinear().range([height-m.b,m.t]);
+  const prepared=data.map(r=>{const o={period:r.period};for(const g of groups)o[g]=metric==='share'?(r.groupShares?.[g]||0):(r.groupVolumes?.[g]||0);return o;});
+  const keys=groups.filter(g=>prepared.some(r=>r[g]>0));const stack=d3.stack().keys(keys)(prepared);const maxY=metric==='share'?1:d3.max(stack,arr=>d3.max(arr,d=>d[1]))||1;x.domain(d3.extent(prepared,d=>periodToDate(d.period)));y.domain([0,maxY]);
+  if(metric==='share'){svg.append('g').attr('transform',`translate(0,${height-m.b})`).call(d3.axisBottom(x).ticks(6).tickFormat(d3.timeFormat('%Y-%m')));}else{svg.append('g').attr('transform',`translate(0,${height-m.b})`).call(d3.axisBottom(x).ticks(6).tickFormat(d3.timeFormat('%Y-%m')));}
+  const area=d3.area().x(d=>x(periodToDate(d.data.period))).y0(d=>y(d[0])).y1(d=>y(d[1])).curve(d3.curveMonotoneX);
+  svg.append('g').selectAll('path').data(stack).join('path').attr('d',area).attr('fill',d=>supplyGroupColor(d.key)).attr('fill-opacity',0.72).attr('stroke','#0b111a').attr('stroke-width',0.6);
+  svg.append('g').attr('transform',`translate(${m.l},0)`).call(d3.axisLeft(y).ticks(6).tickFormat(v=>metric==='share'?`${Math.round(v*100)}%`:supplyFormatVolume(v,commodity))).call(g=>g.selectAll('text').attr('fill','#8793a5').attr('font-size',9).attr('font-family','IBM Plex Mono')).call(g=>g.selectAll('path,line').attr('stroke','#342b42'));
+  let focus=svg.append('g').style('display','none');focus.append('line').attr('class','crosshair').attr('y1',m.t).attr('y2',height-m.b);focus.append('circle').attr('r',4).attr('class','focus-dot');const bisect=d3.bisector(d=>periodToDate(d.period)).left;const overlay=svg.append('rect').attr('x',m.l).attr('y',m.t).attr('width',width-m.l-m.r).attr('height',height-m.t-m.b).attr('fill','transparent').style('cursor','crosshair');overlay.on('pointerenter',()=>focus.style('display',null)).on('pointermove',(event)=>{const [px]=d3.pointer(event);const dt=x.invert(px);const i=Math.max(0,Math.min(prepared.length-1,bisect(prepared,dt)));const r=prepared[i];const cx=x(periodToDate(r.period));const total=metric==='share'?1:(r.total||0);focus.attr('transform',`translate(${cx},0)`).select('.focus-dot').attr('cy',y(metric==='share'?Math.min(1,total):Math.min(maxY,total)));const lines=keys.map(g=>`${g}: <strong>${metric==='share'?pct(r[g]):supplyFormatVolume(r[g],commodity)}</strong>`).join('<br>');showTip(event,`${r.period}<br>${lines}`);}).on('pointerleave',()=>{focus.style('display','none');hideTip();});
+  const legend=keys.slice(0,8).map(g=>`<span class="supply-legend-item"><i style="background:${supplyGroupColor(g)}"></i>${g}</span>`).join('');el.insertAdjacentHTML('beforeend',`<div class="supply-inline-legend">${legend}</div>`);
+}
+function renderRefinerySignal(country){
+  const el=qs('#refineryPanel');if(!el)return;let src=state.supply?.refinery?.[country];let oilProd=state.supply?state.supply.oil?.petrol95?.[country]?.history?.slice(-12):[];let diesel=state.supply?state.supply.oil?.diesel?.[country]?.history?.slice(-12):[];if(country==='EU27'){src={};for(const key of ['petrol95','diesel']){const byP=new Map();for(const code of EU.map(([c])=>c)){for(const r of (state.supply?.refinery?.[code]?.[key]||[])){byP.set(r.period,(byP.get(r.period)||0)+Number(r.value||0));}}src[key]=[...byP.entries()].map(([period,value])=>({period,value})).sort((a,b)=>a.period.localeCompare(b.period));}for(const key of ['petrol95','diesel']){const byP=new Map();const table=key==='petrol95'?state.supply.oil?.petrol95:state.supply.oil?.diesel;for(const code of EU.map(([c])=>c)){for(const r of (table?.[code]?.history||[])){byP.set(r.period,(byP.get(r.period)||0)+Number(r.total||0));}}if(key==='petrol95')oilProd=[...byP.entries()].map(([period,total])=>({period,total})).sort((a,b)=>a.period.localeCompare(b.period)).slice(-12);else diesel=[...byP.entries()].map(([period,total])=>({period,total})).sort((a,b)=>a.period.localeCompare(b.period)).slice(-12);}}
+  if(!src || (!src.petrol95?.length&&!src.diesel?.length)){el.innerHTML='<div class="empty">Refinery-output series was not available for this country. Imported product volumes remain available above.</div>';return;}
+  const cards=[];for(const [key,label] of [['petrol95','Petrol 95'],['diesel','Diesel']]){const importSeries=(key==='petrol95'?oilProd:diesel)||[];const imp=importSeries.reduce((n,r)=>n+(r.total||0),0);const ref=(src[key]||[]).slice(-12).reduce((n,r)=>n+(r.value||0),0);const signal=(imp+ref)?ref/(imp+ref):null;cards.push(`<div class="refinery-card"><div class="eyebrow">${label} · LAST 12 MONTHS</div><div class="refinery-number">${fmt(ref,0)} <span>kt refinery output</span></div><div class="refinery-sub">${fmt(imp,0)} kt imported product · output/(output+imports): <strong>${pct(signal)}</strong></div><div class="refinery-bar"><i style="width:${Math.max(0,Math.min(100,(signal||0)*100))}%"></i></div></div>`)}
+  qs('#refineryPanel').innerHTML=cards.join('');qs('#refineryPeriod').textContent=state.supply?.meta?.supply_from?`archive ${state.supply.meta.supply_from} → ${state.supply.meta.supply_to}`:'';
+}
+function renderSupply(){
+  if(!state.supply){qs('#supplyHistoryBadge').textContent='SUPPLY ARCHIVE NOT LOADED';qs('#supplyTimeline').innerHTML='<div class="empty">Run the full energy-data refresh to build the supply archive.</div>';return;}
+  const c=state.supplyCountry,commodity=state.supplyCommodity,product=state.supplyProduct;state.supply._uiCommodity=commodity;state.supply._uiProduct=product;
+  const series=supplySeries(c,commodity,product);renderSupplyMetrics(series,commodity,product);renderSupplyPartners(series,commodity);renderSupplyMap(series,state.supplyMapMetric);drawSupplyTimeline(series,state.supplyTimelineMetric,commodity);renderRefinerySignal(c);
+  qs('#supplyLatestPeriod').textContent=supplyLatest(series)?.period||'NO DATA';qs('#supplyHistoryBadge').textContent=series.length?`ARCHIVE ${series[0].period} → ${series.at(-1).period}`:'NO OBSERVATIONS';qs('#supplyMethodNote').textContent=commodity.startsWith('gas_')?'Eurostat nrg_ti_gasm · monthly partner-origin imports':'Eurostat nrg_ti_oilm · monthly product imports · ultimate origin';
+  qs('#supplyTimelineTitle').textContent=state.supplyTimelineMetric==='share'?'Origin share over time':'Imported volume over time';
+}
+
 function renderSources(){
   const f=state.data?.fuel,cz=state.data?.czech_regions,g=state.gas,o=state.oil,fx=state.fx;
   const cards=[
@@ -261,6 +358,7 @@ function renderActive(){
   if(active==='czechia')renderCzTable();
   if(active==='gas')renderGas();
   if(active==='brent')renderBrent();
+  if(active==='supply')renderSupply();
   if(active==='sources')renderSources();
 }
 function setCurrency(currency){state.currency=currency;qs('#currencyEur').classList.toggle('active',currency==='EUR');qs('#currencyCzk').classList.toggle('active',currency==='CZK');renderActive();if(!qs('#entityModal').hidden)renderEntityModal();}
@@ -275,15 +373,23 @@ function initControls(){
   qs('#czFuelSelect').addEventListener('change',e=>{state.czFuel=e.target.value;renderCzTable();});
   qs('#gasCountrySelect').addEventListener('change',e=>{state.gasCountry=e.target.value;renderGas();});qs('#gasHistoryWindow').addEventListener('change',e=>{state.gasWindow=e.target.value;renderGas();});
   qs('#brentHistoryWindow').addEventListener('change',e=>{state.brentWindow=e.target.value;renderBrent();});
+  qs('#supplyCountrySelect').addEventListener('change',e=>{state.supplyCountry=e.target.value;renderSupply();});
+  qs('#supplyCommoditySelect').addEventListener('change',e=>{state.supplyCommodity=e.target.value;const opts=supplyProductsForCommodity(e.target.value);qs('#supplyProductSelect').innerHTML=opts.map(([v,n])=>`<option value=\"${v}\">${n}</option>`).join('');state.supplyProduct=opts[0]?.[0]||'all';renderSupply();});
+  qs('#supplyProductSelect').addEventListener('change',e=>{state.supplyProduct=e.target.value;renderSupply();});
+  qs('#supplyMapMetric').addEventListener('change',e=>{state.supplyMapMetric=e.target.value;renderSupply();});
+  qs('#supplyTimelineMetric').addEventListener('change',e=>{state.supplyTimelineMetric=e.target.value;renderSupply();});
+  qs('#supplyWindow').addEventListener('change',e=>{state.supplyWindow=e.target.value;renderSupply();});
   qs('#entityMetricSelect').addEventListener('change',e=>{state.modal.metric=e.target.value;renderEntityModal();});qs('#entityWindowSelect').addEventListener('change',e=>{state.modal.window=e.target.value;renderEntityModal();});
   qs('#entityModalClose').addEventListener('click',closeEntityDashboard);qs('#entityModal').addEventListener('click',e=>{if(e.target.id==='entityModal')closeEntityDashboard();});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!qs('#entityModal').hidden)closeEntityDashboard();});
 }
 
 async function boot(){
   initControls();
-  const [data,fuelHistory,gas,oil,fx]=await Promise.all([loadJson('./data/current.json'),loadJson('./data/fuel-history.json'),loadJson('./data/gas.json'),loadJson('./data/oil.json'),loadJson('./data/fx.json')]);
-  state.data=data;state.fuelHistory=fuelHistory;state.gas=gas;state.oil=oil;state.fx=fx;buildFxLookup();setStatus();
+  const results=await Promise.all([loadJson('./data/current.json'),loadJson('./data/fuel-history.json'),loadJson('./data/gas.json'),loadJson('./data/oil.json'),loadJson('./data/fx.json'),loadJson('./data/supply.json').catch(()=>null)]);
+  const [data,fuelHistory,gas,oil,fx,supply]=results;state.data=data;state.fuelHistory=fuelHistory;state.gas=gas;state.oil=oil;state.fx=fx;state.supply=supply;buildFxLookup();setStatus();
   qs('#euCountrySelect').innerHTML=EU.map(([c,n])=>`<option value="${c}">${flagEmoji(c)} ${n}</option>`).join('');qs('#euCountrySelect').value='CZ';
+  qs('#supplyCountrySelect').innerHTML=['EU27',...EU.map(([c])=>c)].map(c=>`<option value="${c}">${flagImg(c,c==='EU27'?'EU-27':EU_NAMES.get(c)||c)} ${supplyName(c)}</option>`).join('');qs('#supplyCountrySelect').value=state.supplyCountry;
+  const supplyOpts=supplyProductsForCommodity(state.supplyCommodity);qs('#supplyProductSelect').innerHTML=supplyOpts.map(([v,n])=>`<option value="${v}">${n}</option>`).join('');qs('#supplyProductSelect').value=state.supplyProduct;
   renderOverview();renderSources();
 }
 boot().catch(err=>{console.error(err);const b=qs('#freshnessBadge');b.textContent='DATA LOAD FAILED · OPEN PIPELINE';b.classList.remove('ok');b.href=RUNTIME.actionsUrl||'#';document.querySelector('main').insertAdjacentHTML('afterbegin',`<div class="panel" style="margin-bottom:14px;border-color:#8e304a"><strong>Validated data assets could not be loaded.</strong><div style="color:var(--muted);margin-top:4px">Run the repository's full data-refresh workflow. The repository now fails validation rather than silently leaving the dashboard on bootstrap data.</div></div>`);});

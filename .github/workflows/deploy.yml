@@ -34,6 +34,7 @@ jobs:
           test -f data/gas.json
           test -f data/oil.json
           test -f data/fx.json
+          test -f data/supply.json
 
       - name: Refuse to deploy bootstrap or partial archives
         run: python scripts/validate_data.py

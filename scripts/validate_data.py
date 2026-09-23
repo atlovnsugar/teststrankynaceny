@@ -10,13 +10,10 @@ CZ_CODES = {"CZ010","CZ020","CZ031","CZ032","CZ041","CZ042","CZ051","CZ052","CZ0
 
 
 def load(name: str):
-    if not (DATA / name).exists():
-        fail(f"missing file data/{name} (run the refresh workflow first and commit its output)")
     return json.loads((DATA / name).read_text(encoding="utf-8"))
 
 
 def fail(message: str) -> None:
-    print(f"::error title=Data validation failed::{message}")
     raise SystemExit(f"DATA VALIDATION FAILED: {message}")
 
 
@@ -26,6 +23,7 @@ def main() -> int:
     gas = load("gas.json")
     oil = load("oil.json")
     fx = load("fx.json")
+    supply = load("supply.json")
 
     fuel_hist = fuel.get("history", {})
     if len(set(fuel_hist) & EU_CODES) < 20:
@@ -53,6 +51,17 @@ def main() -> int:
     if len(fx.get("eur_czk", [])) < 1000 or len(fx.get("usd_czk", [])) < 1000:
         fail("ECB FX archive is too short")
 
+    if not supply.get("meta", {}).get("supply_from"):
+        fail("Supply archive has no start period")
+    for product in ("petrol95", "diesel", "lpg"):
+        minimum = 10 if product == "lpg" else 20
+        if len(supply.get("oil", {}).get(product, {})) < minimum:
+            fail(f"Supply oil {product} archive covers too few EU countries")
+    if len(supply.get("gas", {}).get("pipeline", {})) < 20:
+        fail("Supply gaseous-gas archive covers too few EU countries")
+    if len(supply.get("gas", {}).get("lng", {})) < 15:
+        fail("Supply LNG archive covers too few EU countries")
+
     regions = current.get("czech_regions", {})
     if len(regions.get("regions", [])) < 14:
         fail("Czech current regional snapshot is incomplete")
@@ -68,6 +77,7 @@ def main() -> int:
     print(f"Fuel: {len(fuel_hist)} country series · CZ={len(fuel_hist.get('CZ', []))} · LPG countries={lpg_countries}")
     print(f"Gas: CZ={len(gas_hist.get('CZ', []))} · EU27={len(gas_hist.get('EU27', []))}")
     print(f"Brent: {len(oil.get('history', []))} · FX EUR/CZK={len(fx.get('eur_czk', []))} · USD/CZK={len(fx.get('usd_czk', []))}")
+    print(f"Supply: oil petrol={len(supply.get('oil',{}).get('petrol95',{}))} · gas pipeline={len(supply.get('gas',{}).get('pipeline',{}))} · LNG={len(supply.get('gas',{}).get('lng',{}))}")
     return 0
 
 

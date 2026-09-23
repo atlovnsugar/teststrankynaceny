@@ -41,6 +41,7 @@
       <button class="tab" data-view="czechia">Czechia</button>
       <button class="tab" data-view="gas">Natural gas</button>
       <button class="tab" data-view="brent">Brent crude</button>
+      <button class="tab" data-view="supply">Supply &amp; flows</button>
       <button class="tab" data-view="sources">Sources</button>
     </nav>
 
@@ -114,6 +115,58 @@
       <div class="signal-row"><span id="brentHistoryBadge" class="signal">DAILY ARCHIVE</span><span id="brentFxNote" class="signal muted-signal"></span></div>
       <div class="metric-grid" id="brentMetrics"></div>
       <section class="panel"><div class="panel-header"><div><span class="eyebrow">DAILY HISTORY</span><h2>Brent price</h2></div><div class="controls-row"><label>Window<select id="brentHistoryWindow"><option value="30">1 month</option><option value="252">1 year</option><option value="1260">5 years</option><option value="all">All history</option></select></label><span class="panel-note" id="brentUnitNote"></span></div></div><div id="brentChart" class="chart-large"></div></section>
+    </section>
+
+    <section class="view" id="view-supply">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">ORIGIN / IMPORTS / REFINING / INFRASTRUCTURE</div>
+          <h1>Supply &amp; flows</h1>
+          <p>Monthly import-origin intelligence for oil products and natural gas, plus refinery-output signals. Import partners follow Eurostat's energy-trade series, where partner country represents the <strong>ultimate country of origin</strong>. Flow lines are schematic supply corridors, not literal pipeline geometries.</p>
+        </div>
+        <div class="controls-row supply-controls">
+          <label>Country<select id="supplyCountrySelect"></select></label>
+          <label>Commodity<select id="supplyCommoditySelect"><option value="oil">Oil products</option><option value="gas_pipeline">Natural gas · pipeline / gaseous</option><option value="gas_lng">Natural gas · LNG</option></select></label>
+          <label>Product<select id="supplyProductSelect"></select></label>
+          <label>Map metric<select id="supplyMapMetric"><option value="Russia">Russia share</option><option value="United States">United States share</option><option value="Middle East">Middle East share</option><option value="Norway">Norway share</option><option value="EU / intra-EU">EU / intra-EU share</option></select></label>
+        </div>
+      </div>
+      <div class="signal-row"><span id="supplyHistoryBadge" class="signal">SUPPLY ARCHIVE</span><span id="supplyMethodNote" class="signal muted-signal"></span></div>
+      <div class="metric-grid" id="supplyMetrics"></div>
+      <div class="map-layout">
+        <section class="panel map-panel supply-map-panel">
+          <div class="panel-header"><div><span class="eyebrow">SUPPLY CORRIDORS · SCHEMATIC</span><h2>Where the imports come from</h2></div><span class="panel-note">latest month</span></div>
+          <div id="supplyMap" class="map supply-map"></div>
+          <div class="legend supply-map-legend"><span>LOW SHARE</span><div class="legend-bar supply-gradient"></div><span>HIGH SHARE</span></div>
+          <div class="map-disclaimer">Schematic source-to-country flow view. It is not a geolocated pipeline route or AIS track; use the linked ENTSOG / infrastructure sources for asset-level routes.</div>
+        </section>
+        <section class="panel side-panel">
+          <div class="panel-header"><div><span class="eyebrow">LATEST IMPORT ORIGINS</span><h2>Top partners</h2></div><span class="panel-note" id="supplyLatestPeriod"></span></div>
+          <div class="table-wrap tall"><table id="supplyPartnerTable"></table></div>
+        </section>
+      </div>
+      <section class="panel">
+        <div class="panel-header"><div><span class="eyebrow">ORIGIN TIMELINE · MONTHLY</span><h2 id="supplyTimelineTitle">Origin share</h2></div>
+          <div class="controls-row"><label>Timeline<select id="supplyTimelineMetric"><option value="share">Origin share %</option><option value="volume">Import volume</option></select></label><label>Window<select id="supplyWindow"><option value="24">2 years</option><option value="60">5 years</option><option value="120">10 years</option><option value="all">All available</option></select></label></div>
+        </div>
+        <div id="supplyTimeline" class="chart-large"></div>
+      </section>
+      <section class="split-grid">
+        <section class="panel">
+          <div class="panel-header"><div><span class="eyebrow">REFINERY SIGNAL</span><h2>Refinery output vs imported product</h2></div><span class="panel-note" id="refineryPeriod"></span></div>
+          <div id="refineryPanel" class="refinery-panel"></div>
+          <div class="map-disclaimer">This is an import/refinery-output signal, not a consumption-share calculation: exports, inventories, blending and feedstock differences mean the two streams cannot simply be treated as domestic-use vs imported-use.</div>
+        </section>
+        <section class="panel">
+          <div class="panel-header"><div><span class="eyebrow">INFRASTRUCTURE INTELLIGENCE</span><h2>Pipelines, LNG &amp; transmission networks</h2></div><span class="panel-note">external specialist maps</span></div>
+          <div class="infra-links">
+            <a class="infra-link" href="https://gasdashboard.entsog.eu/" target="_blank" rel="noopener noreferrer"><strong>ENTSOG Gas Flow Dashboard ↗</strong><span>Daily flows, capacity and supply routes across the European gas transmission system.</span></a>
+            <a class="infra-link" href="https://transparency.entsog.eu/" target="_blank" rel="noopener noreferrer"><strong>ENTSOG Transparency Platform ↗</strong><span>Operator-level gas physical-flow data and historical transparency datasets.</span></a>
+            <a class="infra-link" href="https://globalenergymonitor.org/projects/global-oil-infrastructure-tracker/" target="_blank" rel="noopener noreferrer"><strong>Global Oil Infrastructure Tracker ↗</strong><span>Oil/NGL transmission-pipeline GIS and project-level infrastructure data.</span></a>
+            <a class="infra-link" href="https://globalenergymonitor.org/projects/global-gas-infrastructure-tracker/" target="_blank" rel="noopener noreferrer"><strong>Global Gas Infrastructure Tracker ↗</strong><span>Gas pipeline and LNG-terminal infrastructure inventory and GIS.</span></a>
+          </div>
+        </section>
+      </section>
     </section>
 
     <section class="view" id="view-sources">

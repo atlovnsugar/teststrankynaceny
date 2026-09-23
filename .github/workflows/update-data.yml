@@ -10,6 +10,7 @@ on:
       - 'scripts/update_data.py'
       - 'scripts/validate_data.py'
       - 'requirements.txt'
+      - 'data/supply.json'
       - '.github/workflows/update-data.yml'
 
 permissions:

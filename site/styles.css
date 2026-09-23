@@ -22,3 +22,29 @@ label{display:grid;gap:5px;min-width:120px;color:var(--muted);font:600 10px 'IBM
 @media (max-width:980px){.hero:before{position:static;margin-bottom:8px}}
 @media (max-width:980px){.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.split-grid,.map-layout{grid-template-columns:1fr}.source-cards{grid-template-columns:1fr}.hero,.section-heading{align-items:start;flex-direction:column}.hero-actions{width:100%}.topbar{align-items:flex-start}.topbar-right{flex-wrap:wrap;justify-content:flex-end}.brand-title{white-space:normal}}
 @media (max-width:620px){.topbar{padding:11px 14px}.shell{padding:15px 14px 34px}.metric-grid{grid-template-columns:1fr}.hero h1{font-size:39px}.section-heading h1{font-size:34px}.footer{padding:18px 14px 28px;flex-direction:column}.map,.mini-map{min-height:280px}.tabs-caption{width:100%;margin-bottom:3px}.signal-row{align-items:flex-start;flex-direction:column}.brand-subtitle{display:none}.entity-modal-backdrop{padding:10px}.entity-modal{width:100%;max-height:96vh}.region-highlights{grid-template-columns:1fr}}
+
+
+/* SUPPLY / FLOWS */
+.supply-controls{align-items:flex-end;flex-wrap:wrap;justify-content:flex-end}
+.supply-controls label{min-width:150px}
+.supply-map-panel{overflow:hidden}
+.supply-map{min-height:540px;background:radial-gradient(circle at 50% 45%,rgba(255,50,75,.055),transparent 45%),repeating-linear-gradient(0deg,rgba(255,255,255,.018),rgba(255,255,255,.018) 1px,transparent 1px,transparent 4px)}
+.supply-map .map-country{stroke:#556071;stroke-width:.7;transition:fill .16s ease,stroke .16s ease,filter .16s ease}
+.supply-map .map-country:hover{stroke:#fff;stroke-width:1.4;filter:drop-shadow(0 0 5px rgba(255,49,75,.75))}
+.supply-flow-line{filter:drop-shadow(0 0 5px rgba(255,49,75,.45));animation:supply-pulse 2.8s ease-in-out infinite}
+.supply-hub{filter:drop-shadow(0 0 8px rgba(255,49,75,.95));animation:supply-node-pulse 1.8s ease-in-out infinite}
+@keyframes supply-pulse{0%,100%{stroke-opacity:.22}50%{stroke-opacity:.68}}
+@keyframes supply-node-pulse{0%,100%{r:6;opacity:.75}50%{r:9;opacity:1}}
+.supply-map-legend{margin-top:8px}
+.supply-gradient{background:linear-gradient(90deg,#161c2b,#ff314b)!important}
+.map-disclaimer{font-size:.72rem;line-height:1.45;color:var(--muted);margin-top:10px;border-left:2px solid rgba(255,49,75,.5);padding-left:10px}
+.supply-inline-legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:10px;font:600 10px/1.2 'IBM Plex Mono',monospace;color:var(--muted)}
+.supply-legend-item{display:inline-flex;align-items:center;gap:6px}.supply-legend-item i{width:8px;height:8px;border-radius:50%;display:inline-block;box-shadow:0 0 6px currentColor}
+.refinery-panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.refinery-card{padding:14px;background:rgba(7,13,22,.55);border:1px solid rgba(255,255,255,.08);position:relative;overflow:hidden}
+.refinery-card:before{content:"";position:absolute;inset:0;background:linear-gradient(115deg,rgba(255,49,75,.08),transparent 46%);pointer-events:none}
+.refinery-number{font:700 clamp(1.35rem,2.2vw,2rem)/1.1 'IBM Plex Mono',monospace;color:#f4f7fb;margin-top:9px}.refinery-number span{font-size:.7rem;color:var(--muted);font-weight:500}
+.refinery-sub{margin-top:9px;font-size:.74rem;color:var(--muted);line-height:1.45}.refinery-sub strong{color:#ff6572}
+.refinery-bar{height:4px;background:#111827;margin-top:11px;overflow:hidden}.refinery-bar i{display:block;height:100%;background:linear-gradient(90deg,#6d1824,#ff314b);box-shadow:0 0 10px rgba(255,49,75,.55)}
+.infra-links{display:grid;grid-template-columns:1fr 1fr;gap:10px}.infra-link{display:flex;flex-direction:column;gap:6px;padding:13px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.018);color:var(--text);text-decoration:none;transition:.18s ease}.infra-link:hover{border-color:rgba(255,49,75,.55);transform:translateY(-1px);box-shadow:0 0 18px rgba(255,49,75,.12)}.infra-link strong{font:700 .76rem/1.2 'IBM Plex Mono',monospace;color:#ff6470}.infra-link span{font-size:.74rem;color:var(--muted);line-height:1.45}
+@media (max-width:900px){.refinery-panel,.infra-links{grid-template-columns:1fr}.supply-controls{justify-content:flex-start}.supply-controls label{min-width:140px}}

@@ -55,6 +55,10 @@ ECB_FX_URL = "https://data-api.ecb.europa.eu/service/data/EXR/{series}"
 NUTS_COUNTRIES_URL = "https://gisco-services.ec.europa.eu/distribution/v2/nuts/geojson/NUTS_RG_20M_2024_4326_LEVL_0.geojson"
 NUTS_REGIONS_URL = "https://gisco-services.ec.europa.eu/distribution/v2/nuts/geojson/NUTS_RG_20M_2024_4326_LEVL_3.geojson"
 FUEL_HISTORY_MIRROR_URL = "https://huggingface.co/datasets/FionnHughes/eu-weekly-oil-bulletin/resolve/main/eu_oil_bulletin.csv"
+SUPPLY_SINCE = "2016-01"
+EUROSTAT_OIL_IMPORTS_URL = "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/nrg_ti_oilm"
+EUROSTAT_GAS_IMPORTS_URL = "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/nrg_ti_gasm"
+EUROSTAT_REFINERY_URL = "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/ei_isen_m"
 
 
 def session() -> requests.Session:
@@ -842,6 +846,190 @@ def fetch_geojson(s: requests.Session, url: str, target: Path, clip_europe: bool
     write_json(target, payload)
 
 
+
+SUPPLY_GROUPS = {
+    "Russia": {"RU"},
+    "United States": {"US"},
+    "Middle East": {"AE","BH","IQ","IR","KW","OM","QA","SA","YE"},
+    "North Africa": {"DZ","EG","LY"},
+    "Norway": {"NO"},
+    "Azerbaijan / Caspian": {"AZ","KZ"},
+    "United Kingdom": {"GB","UK"},
+}
+
+
+def eurostat_json(s: requests.Session, url: str, params: list[tuple[str, str]]) -> dict[str, Any]:
+    base = [("format", "JSON"), ("lang", "en")] + params
+    return get(s, url, params=base).json()
+
+
+def supply_group(partner: str) -> str:
+    p = str(partner or "").upper()
+    for group, codes in SUPPLY_GROUPS.items():
+        if p in codes:
+            return group
+    if p in EU_CODES:
+        return "EU / intra-EU"
+    if p in {"WORLD", "EXT_EU27_2020", "EU27_2020", "EU27"} or not re.fullmatch(r"[A-Z]{2}", p):
+        return "Other"
+    return "Other"
+
+
+def build_supply_rows(raw: dict[str, Any], value_unit: str, allowed_geos: set[str]) -> dict[str, dict[str, list[dict[str, Any]]]]:
+    rows = flatten_jsonstat(raw)
+    out: dict[str, dict[str, list[dict[str, Any]]]] = defaultdict(lambda: defaultdict(list))
+    for row in rows:
+        geo = str(row.get("geo", ""))
+        partner = str(row.get("partner", ""))
+        period = str(row.get("time", ""))
+        value = row.get("value")
+        if geo not in allowed_geos or not period or value is None:
+            continue
+        try:
+            numeric = float(value)
+        except Exception:
+            continue
+        if numeric < 0:
+            continue
+        unit = str(row.get("unit", value_unit))
+        out[geo][partner].append({"period": period, "value": numeric, "unit": unit})
+    return out
+
+
+def compact_origin_history(raw: dict[str, dict[str, list[dict[str, Any]]]], unit: str) -> dict[str, Any]:
+    # raw[geo][partner] -> observations. Collapse to per-month totals, group volumes and top partners.
+    by_geo_period: dict[str, dict[str, dict[str, Any]]] = defaultdict(dict)
+    for geo, partners in raw.items():
+        for partner, obs in partners.items():
+            for r in obs:
+                period = r["period"]
+                bucket = by_geo_period[geo].setdefault(period, {"period": period, "total": 0.0, "partnerVolumes": defaultdict(float)})
+                bucket["total"] += float(r["value"])
+                bucket["partnerVolumes"][partner] += float(r["value"])
+    out: dict[str, Any] = {}
+    for geo, periods in by_geo_period.items():
+        hist=[]
+        for period, bucket in periods.items():
+            total=float(bucket["total"])
+            groups=defaultdict(float)
+            for partner,value in bucket["partnerVolumes"].items():
+                groups[supply_group(partner)] += float(value)
+            partners=sorted(bucket["partnerVolumes"].items(), key=lambda kv: kv[1], reverse=True)[:10]
+            hist.append({
+                "period": period,
+                "total": round(total, 3),
+                "groupVolumes": {g: round(v,3) for g,v in sorted(groups.items(), key=lambda kv: kv[1], reverse=True)},
+                "partners": [{"code":p,"value":round(v,3),"share":round(v/total,6) if total else 0} for p,v in partners]
+            })
+        out[geo] = {"unit": unit, "history": sorted(hist, key=lambda x: x["period"])}
+    return out
+
+
+def parse_supply_oil(s: requests.Session) -> dict[str, Any]:
+    products = {"petrol95":"O4652", "diesel":"O4671", "lpg":"O4630"}
+    common=[("freq","M"),("unit","THS_T"),("sinceTimePeriod",SUPPLY_SINCE)]
+    geo_params=[("geo",code) for code,_ in EU]
+    product_out={}
+    for product,siec in products.items():
+        params=common+[("siec",siec)]+geo_params
+        raw=eurostat_json(s, EUROSTAT_OIL_IMPORTS_URL, params)
+        # Require an actual time dimension before treating a response as valid.
+        if "time" not in raw.get("id",[]):
+            raise RuntimeError(f"Eurostat oil imports {siec} response has no time dimension")
+        rows=flatten_jsonstat(raw)
+        nested=defaultdict(lambda: defaultdict(list))
+        for row in rows:
+            geo=str(row.get("geo","")); partner=str(row.get("partner","")); period=str(row.get("time","")); value=row.get("value")
+            if geo not in EU_CODES or not period or value is None: continue
+            try: val=float(value)
+            except Exception: continue
+            if val<0: continue
+            nested[geo][partner].append({"period":period,"value":val})
+        product_out[product]=compact_origin_history(nested,"THS_T")
+    return product_out
+
+
+def parse_supply_gas(s: requests.Session) -> tuple[dict[str, Any], dict[str, Any]]:
+    out={}
+    for key,siec in (("gas_pipeline","G3000"),("gas_lng","G3200")):
+        params=[("freq","M"),("unit","TJ_GCV"),("siec",siec),("sinceTimePeriod",SUPPLY_SINCE)]+[("geo",code) for code,_ in EU]
+        raw=eurostat_json(s, EUROSTAT_GAS_IMPORTS_URL, params)
+        if "time" not in raw.get("id",[]):
+            raise RuntimeError(f"Eurostat gas imports {siec} response has no time dimension")
+        nested=defaultdict(lambda: defaultdict(list))
+        for row in flatten_jsonstat(raw):
+            geo=str(row.get("geo","")); partner=str(row.get("partner","")); period=str(row.get("time","")); value=row.get("value")
+            if geo not in EU_CODES or not period or value is None: continue
+            try: val=float(value)
+            except Exception: continue
+            if val<0: continue
+            nested[geo][partner].append({"period":period,"value":val})
+        out[key]=compact_origin_history(nested,"TJ_GCV")
+    return out["gas_pipeline"], out["gas_lng"]
+
+
+def parse_refinery_output(s: requests.Session) -> dict[str, Any]:
+    indicator_map={"petrol95":"IS-ROMS-T","diesel":"IS-ROGD-T"}
+    params_base=[("freq","M"),("unit","THS_T"),("sinceTimePeriod",SUPPLY_SINCE)]+[("geo",code) for code,_ in EU]
+    out={code:{} for code,_ in EU}
+    for product,indic in indicator_map.items():
+        raw=eurostat_json(s, EUROSTAT_REFINERY_URL, params_base+[("indic_nrg",indic)])
+        if "time" not in raw.get("id",[]):
+            raise RuntimeError(f"Eurostat refinery {indic} response has no time dimension")
+        rows=flatten_jsonstat(raw)
+        for row in rows:
+            geo=str(row.get("geo",""));period=str(row.get("time",""));value=row.get("value")
+            if geo not in EU_CODES or not period or value is None: continue
+            try: val=float(value)
+            except Exception: continue
+            out.setdefault(geo,{}).setdefault(product,[]).append({"period":period,"value":round(val,3)})
+    for geo in out:
+        for product in list(out[geo]): out[geo][product]=sorted(out[geo][product],key=lambda x:x["period"])
+    return out
+
+
+def parse_supply(s: requests.Session) -> dict[str, Any]:
+    oil=parse_supply_oil(s)
+    gas_pipeline,gas_lng=parse_supply_gas(s)
+    try:
+        refinery=parse_refinery_output(s)
+        refinery_status="available"
+    except Exception as exc:
+        print(f"::warning title=Refinery output unavailable::{exc}")
+        refinery={}
+        refinery_status=f"unavailable: {exc}"
+    # Basic completeness validation: every EU country needs at least one oil and gas series.
+    for product in ("petrol95","diesel","lpg"):
+        minimum = 10 if product == "lpg" else 20
+        if len(oil.get(product,{})) < minimum:
+            raise RuntimeError(f"supply oil {product} contains only {len(oil.get(product,{}))} EU countries")
+    if len(gas_pipeline) < 20 or len(gas_lng) < 15:
+        raise RuntimeError(f"supply gas coverage too small: pipeline={len(gas_pipeline)} LNG={len(gas_lng)}")
+    latest_candidates=[]
+    for coll in list(oil.values())+[gas_pipeline,gas_lng]:
+        for item in coll.values():
+            if item.get("history"): latest_candidates.append(item["history"][-1]["period"])
+    meta={
+        "supply_from":SUPPLY_SINCE,
+        "supply_to":max(latest_candidates) if latest_candidates else None,
+        "history_months":"10 years rolling",
+        "source":"Eurostat monthly energy imports by partner country; partner is ultimate country of origin",
+        "oil_source_url":"https://ec.europa.eu/eurostat/web/energy/data",
+        "gas_source_url":"https://ec.europa.eu/eurostat/web/energy/data",
+        "refinery_source_url":"https://ec.europa.eu/eurostat/web/energy/data",
+        "method_notes":[
+            "Oil products use SIEC O4652 motor gasoline, O4671 gas/diesel oil and O4630 liquefied petroleum gases.",
+            "Natural gas uses SIEC G3000 gaseous natural gas and G3200 LNG.",
+            "Country partner values are retained as the top ten monthly origins; group volumes retain the full partner set.",
+            "Russia/United States/Middle East shares are shares of recorded imports in the selected series, not shares of total national energy consumption.",
+            "Refinery output is shown next to imported product volume as a structural signal, not as domestic-consumption share."
+        ],
+        "groups": {k:sorted(v) for k,v in SUPPLY_GROUPS.items()},
+        "refinery_status": refinery_status
+    }
+    return {"generated_at":datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00","Z"),"meta":meta,"oil":oil,"gas":{"pipeline":gas_pipeline,"lng":gas_lng},"refinery":refinery}
+
+
 def main() -> int:
     DATA.mkdir(exist_ok=True)
     GEO.mkdir(exist_ok=True)
@@ -882,6 +1070,19 @@ def main() -> int:
         message = f"gas refresh failed: {exc}"
         if gas_path.exists():
             warnings.append(message + " (keeping previous archive)")
+        else:
+            warnings.append(message)
+            hard_failures.append(message)
+
+    try:
+        supply = parse_supply(s)
+        # Supply archive is comparatively large; use compact separators while preserving numeric precision.
+        (DATA / "supply.json").write_text(json.dumps(supply, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        successes.append(f"supply: {supply['meta'].get('supply_from')} → {supply['meta'].get('supply_to')} · oil={len(supply['oil']['petrol95'])} countries")
+    except Exception as exc:
+        message = f"Supply refresh failed: {exc}"
+        if (DATA / "supply.json").exists():
+            warnings.append(message + " (keeping previous supply archive)")
         else:
             warnings.append(message)
             hard_failures.append(message)
