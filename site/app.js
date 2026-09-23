@@ -1,22 +1,29 @@
 const EU = [
   ['AT','Austria'],['BE','Belgium'],['BG','Bulgaria'],['HR','Croatia'],['CY','Cyprus'],['CZ','Czechia'],['DK','Denmark'],['EE','Estonia'],['FI','Finland'],['FR','France'],['DE','Germany'],['GR','Greece'],['HU','Hungary'],['IE','Ireland'],['IT','Italy'],['LV','Latvia'],['LT','Lithuania'],['LU','Luxembourg'],['MT','Malta'],['NL','Netherlands'],['PL','Poland'],['PT','Portugal'],['RO','Romania'],['SK','Slovakia'],['SI','Slovenia'],['ES','Spain'],['SE','Sweden']
 ];
-const EU_SET = new Set(EU.map(d => d[0]));
+const EU_SET = new Set(EU.map(([c]) => c));
+const EU_NAMES = new Map(EU);
 const CZ_REGIONS = new Map([
   ['CZ010','Praha'],['CZ020','Středočeský kraj'],['CZ031','Jihočeský kraj'],['CZ032','Plzeňský kraj'],['CZ041','Karlovarský kraj'],['CZ042','Ústecký kraj'],['CZ051','Liberecký kraj'],['CZ052','Královéhradecký kraj'],['CZ053','Pardubický kraj'],['CZ063','Vysočina'],['CZ064','Jihomoravský kraj'],['CZ071','Olomoucký kraj'],['CZ072','Zlínský kraj'],['CZ080','Moravskoslezský kraj']
 ]);
-const ISO2_FROM_NAME = new Map(EU.map(([c,n]) => [n,c]));
 const GEO_URLS = {countries:'./data/geo/eu-countries.geojson',czRegions:'./data/geo/cz-regions.geojson'};
+const RUNTIME = window.RUNTIME_CONFIG || {};
 
-let state = {
-  data:null,fuelHistory:null,gas:null,oil:null,fx:null,fxMap:null,currency:'EUR',
-  euFuel:'petrol95',czFuel:'petrol95',euCountry:'CZ',euWindow:'52',gasCountry:'CZ',geoCountries:null,geoRegions:null
+const state = {
+  data:null, fuelHistory:null, gas:null, oil:null, fx:null, fxMap:null,
+  currency:'EUR', euFuel:'petrol95', czFuel:'petrol95', euCountry:'CZ',
+  euWindow:'52', gasCountry:'CZ', gasWindow:'all', brentWindow:'all',
+  geoCountries:null, geoRegions:null,
+  modal:{kind:null,id:null,metric:'petrol95',window:'all'}
 };
-const qs = s => document.querySelector(s); const qsa = s => [...document.querySelectorAll(s)];
+
+const qs = s => document.querySelector(s);
+const qsa = s => [...document.querySelectorAll(s)];
 const fmt = (v,digits=2) => Number.isFinite(v) ? v.toLocaleString('en-GB',{minimumFractionDigits:digits,maximumFractionDigits:digits}) : '—';
-const asNum = v => (v===null||v===undefined||v===''||Number.isNaN(Number(v)))?null:Number(v);
-const fuelLabel = k => ({petrol95:'Euro 95 petrol',diesel:'Diesel',lpg:'LPG'})[k]||k;
+const fuelLabel = k => ({petrol95:'Euro 95 petrol',diesel:'Diesel',lpg:'LPG'})[k] || k;
+const fuelUnit = key => key === 'lpg' || key === 'petrol95' || key === 'diesel' ? (state.currency === 'CZK' ? 'Kč/l' : 'EUR/l') : '';
 const sortBy = (arr,key) => [...arr].sort((a,b)=>(a[key]??Infinity)-(b[key]??Infinity));
+const flagEmoji = code => { const s=String(code||'').toUpperCase(); if(s==='EU'||s==='EU27') return '🇪🇺'; return s.length===2 ? String.fromCodePoint(...[...s].map(c=>127397+c.charCodeAt(0))) : '◇'; };
 
 async function loadJson(path){const r=await fetch(path,{cache:'no-store'});if(!r.ok)throw new Error(`${path}: ${r.status}`);return r.json();}
 function buildFxLookup(){
@@ -25,96 +32,252 @@ function buildFxLookup(){
   state.fxMap = {eur,usd,eurDates:[...(state.fx?.eur_czk||[]).map(x=>x.date).sort()],usdDates:[...(state.fx?.usd_czk||[]).map(x=>x.date).sort()]};
 }
 function prevRate(map,dates,date){
-  if(!map||!dates?.length)return null;
-  if(map.has(date))return map.get(date);
+  if(!map || !dates?.length || !date) return null;
+  if(map.has(date)) return map.get(date);
   let lo=0,hi=dates.length-1,ans=-1;
   while(lo<=hi){const mid=(lo+hi)>>1;if(dates[mid]<=date){ans=mid;lo=mid+1;}else hi=mid-1;}
-  return ans>=0?map.get(dates[ans]):null;
+  return ans>=0 ? map.get(dates[ans]) : null;
 }
-function eurCzk(date){return prevRate(state.fxMap?.eur,state.fxMap?.eurDates,date);}
-function usdCzk(date){return prevRate(state.fxMap?.usd,state.fxMap?.usdDates,date);}
-function fuelValue(v,date,currency=state.currency){if(!Number.isFinite(v))return null;if(currency!=='CZK')return v;const rate=eurCzk(date);return Number.isFinite(rate)?v*rate:null;}
-function priceText(v,currency=state.currency,date=null){if(!Number.isFinite(v))return '—';const n=fuelValue(v,date,currency);return Number.isFinite(n)?`${currency==='CZK'?fmt(n,2)+' Kč/l':'€'+fmt(n,2)+'/l'}`:'—';}
-function gasPriceText(v,date=null){if(!Number.isFinite(v))return '—';if(state.currency==='CZK'){const rate=eurCzk(date);if(!Number.isFinite(rate))return '—';return `${fmt(v*rate,3)} Kč/kWh`;}return `€${fmt(v,3)}/kWh`;}
-function brentText(v,date=null){if(!Number.isFinite(v))return '—';if(state.currency==='CZK'){const rate=usdCzk(date);if(!Number.isFinite(rate))return '—';return `${fmt(v*rate,0)} Kč/bbl`;}return `$${fmt(v,2)}/bbl`;}
-function currentFxLabel(date){const rate=eurCzk(date);return rate?`ECB FX ${fmt(rate,3)} Kč/€ · date matched`:'ECB FX unavailable';}
-function fuelHistoryInfo(){
-  const series=state.fuelHistory?.history?.[state.euCountry]||[];
-  const allDates=Object.values(state.fuelHistory?.history||{}).flat().map(x=>x.date).filter(Boolean).sort();
-  return {oldest:allDates[0],latest:allDates.at(-1),selected:series};
-}
-function setStatus(){const dates=[state.data?.fuel?.as_of,state.data?.czech_regions?.as_of,state.data?.natural_gas?.as_of,state.data?.brent?.as_of].filter(Boolean);const latest=dates.length?dates.sort().at(-1):null;const fuelObs=Object.values(state.fuelHistory?.history||{}).reduce((n,s)=>n+(Array.isArray(s)?s.length:0),0);const gasObs=Object.values(state.gas?.history||{}).reduce((n,s)=>n+(Array.isArray(s)?s.length:0),0);const fxObs=(state.fx?.eur_czk?.length||0)+(state.fx?.usd_czk?.length||0);const bootstrap=fuelObs<100||gasObs<10||fxObs<100;const b=qs('#freshnessBadge');b.textContent=bootstrap?'BOOTSTRAP · RUN FULL REFRESH':(latest?`Latest source: ${latest}`:'Data pending');b.classList.toggle('ok',!!latest&&!bootstrap);}
+const eurCzk = date => prevRate(state.fxMap?.eur,state.fxMap?.eurDates,date);
+const usdCzk = date => prevRate(state.fxMap?.usd,state.fxMap?.usdDates,date);
+function fuelValue(v,date,currency=state.currency){if(!Number.isFinite(v))return null;if(currency!=='CZK')return v;const r=eurCzk(date);return Number.isFinite(r)?v*r:null;}
+function priceText(v,currency=state.currency,date=null){if(!Number.isFinite(v))return 'NR';const n=fuelValue(v,date,currency);return Number.isFinite(n)?`${currency==='CZK'?fmt(n,2)+' Kč/l':'€'+fmt(n,3)+'/l'}`:'NR';}
+function gasPriceText(v,date=null){if(!Number.isFinite(v))return 'NR';if(state.currency==='CZK'){const r=eurCzk(date);return Number.isFinite(r)?`${fmt(v*r,3)} Kč/kWh`:'NR';}return `€${fmt(v,3)}/kWh`;}
+function brentText(v,date=null){if(!Number.isFinite(v))return 'NR';if(state.currency==='CZK'){const r=usdCzk(date);return Number.isFinite(r)?`${fmt(v*r,0)} Kč/bbl`:'NR';}return `$${fmt(v,2)}/bbl`;}
+function currentFxLabel(date){const r=eurCzk(date);return Number.isFinite(r)?`ECB FX ${fmt(r,3)} Kč/€ · date matched`:'ECB FX unavailable';}
 function metric(label,value,meta){return `<div class="metric"><div class="label">${label}</div><div class="value">${value}</div><div class="meta">${meta||''}</div></div>`;}
+function periodToDate(period){const m=String(period||'').match(/^(\d{4})[-_](?:S|H)([12])$/i);if(m)return new Date(Date.UTC(Number(m[1]),Number(m[2])===2?6:0,1));return new Date(period);}
+function dateForPoint(d){return d.date ? new Date(`${d.date}T00:00:00Z`) : periodToDate(d.period);}
+function windowSlice(arr,windowValue){if(windowValue==='all')return arr;const n=Number(windowValue);return Number.isFinite(n)?arr.slice(-n):arr;}
+function flash(el){if(!el)return;el.classList.remove('flash-hit');void el.offsetWidth;el.classList.add('flash-hit');setTimeout(()=>el.classList.remove('flash-hit'),500);}
+
+function archiveStats(){
+  const fuelObs = Object.values(state.fuelHistory?.history||{}).reduce((n,s)=>n+(Array.isArray(s)?s.length:0),0);
+  const gasObs = Object.values(state.gas?.history||{}).reduce((n,s)=>n+(Array.isArray(s)?s.length:0),0);
+  const oilObs = state.oil?.history?.length || 0;
+  const fxObs = (state.fx?.eur_czk?.length||0)+(state.fx?.usd_czk?.length||0);
+  const fuelCountries = Object.keys(state.fuelHistory?.history||{}).filter(c=>EU_SET.has(c)).length;
+  return {fuelObs,gasObs,oilObs,fxObs,fuelCountries};
+}
+function setStatus(){
+  const stats=archiveStats();
+  const ready=stats.fuelObs>=20000 && stats.fuelCountries>=20 && stats.gasObs>=200 && stats.oilObs>=1000 && stats.fxObs>=1000;
+  const latest=[state.data?.fuel?.as_of,state.data?.czech_regions?.as_of,state.data?.natural_gas?.as_of,state.data?.brent?.as_of].filter(Boolean).sort().at(-1);
+  const badge=qs('#freshnessBadge');
+  badge.textContent=ready ? `ARCHIVE LIVE · ${latest||'current'}` : 'BOOTSTRAP · OPEN DATA PIPELINE';
+  badge.classList.toggle('ok',ready);
+  badge.title=ready?'Validated historical archive. Click to open the repository workflow.':'The checked-in seed data is not a validated full archive. Click to open the repository workflow and run the refresh.';
+  badge.href=RUNTIME.actionsUrl || '#';badge.classList.toggle('disabled',!RUNTIME.actionsUrl);
+  badge.setAttribute('aria-label',badge.title);
+}
 
 function renderOverview(){
-  const fuel=state.data.fuel,rows=fuel.countries,petrol=rows.map(r=>r.petrol95).filter(Number.isFinite),cz=rows.find(r=>r.code==='CZ');
-  const min=Math.min(...petrol),max=Math.max(...petrol);
+  const fuel=state.data.fuel,rows=fuel.countries,cz=rows.find(r=>r.code==='CZ');
+  const petrol=rows.map(r=>r.petrol95).filter(Number.isFinite);const min=Math.min(...petrol),max=Math.max(...petrol);
+  const info=state.fuelHistory?.history?.CZ||[];
   qs('#overviewMetrics').innerHTML=[
     metric('CZ petrol 95',priceText(cz?.petrol95,state.currency,fuel.as_of),`week ${fuel.as_of}`),
     metric('CZ diesel',priceText(cz?.diesel,state.currency,fuel.as_of),`week ${fuel.as_of}`),
-    metric('EU petrol spread',state.currency==='CZK'?(Number.isFinite(eurCzk(fuel.as_of))?`${fmt((max-min)*eurCzk(fuel.as_of),2)} Kč/l`:'—'):`€${fmt(max-min,2)}/l`,`27-country min → max`),
-    metric('Archive',fuelHistoryInfo().oldest?`${fuelHistoryInfo().oldest} → ${fuelHistoryInfo().latest}`:'pending','weekly EC history')
+    metric('EU petrol spread',state.currency==='CZK'&&Number.isFinite(eurCzk(fuel.as_of))?`${fmt((max-min)*eurCzk(fuel.as_of),2)} Kč/l`:`€${fmt(max-min,2)}/l`,`27-country min → max`),
+    metric('CZ archive',info.length?`${info.length.toLocaleString('en-GB')} weekly obs.`:'pending',info[0]?.date?`${info[0].date} → ${info.at(-1)?.date||'—'}`:'EC history')
   ].join('');
-  qs('#fuelAsOf').textContent=`as of ${fuel.as_of}`; qs('#czAsOf').textContent=`as of ${state.data.czech_regions.as_of}`;
-  const top=sortBy(rows,'petrol95').slice(0,6);
-  qs('#overviewFuelTable').innerHTML=`<thead><tr><th>Country</th><th class="num">Petrol</th><th class="num">Diesel</th></tr></thead><tbody>${top.map(r=>`<tr><td>${r.name}</td><td class="num">${priceText(r.petrol95,state.currency,fuel.as_of)}</td><td class="num">${priceText(r.diesel,state.currency,fuel.as_of)}</td></tr>`).join('')}</tbody>`;
-  const regions=state.data.czech_regions.regions; const cheapest=sortBy(regions,'petrol95').slice(0,2), expensive=[...regions].sort((a,b)=>b.petrol95-a.petrol95).slice(0,2);
-  qs('#regionHighlights').innerHTML=[...cheapest.map(r=>`<div class="region-card"><span class="small">LOWER PETROL SNAPSHOT</span><strong>${r.name}</strong><span>${fmt(r.petrol95)} Kč/l</span></div>`),...expensive.map(r=>`<div class="region-card"><span class="small">HIGHER PETROL SNAPSHOT</span><strong>${r.name}</strong><span>${fmt(r.petrol95)} Kč/l</span></div>`)].join('');
+  qs('#fuelAsOf').textContent=`as of ${fuel.as_of}`;
+  qs('#czAsOf').textContent=`as of ${state.data.czech_regions.as_of}`;
+  const top=sortBy(rows,'petrol95').slice(0,8);
+  qs('#overviewFuelTable').innerHTML=`<thead><tr><th>Country</th><th class="num">Petrol</th><th class="num">Diesel</th></tr></thead><tbody>${top.map(r=>`<tr><td><button class="entity-link" data-country="${r.code}"><span class="flag">${flagEmoji(r.code)}</span>${r.name}</button></td><td class="num">${priceText(r.petrol95,state.currency,fuel.as_of)}</td><td class="num">${priceText(r.diesel,state.currency,fuel.as_of)}</td></tr>`).join('')}</tbody>`;
+  qsa('#overviewFuelTable [data-country]').forEach(b=>b.addEventListener('click',()=>{flash(b);openEntityDashboard('country',b.dataset.country)}));
+  const regions=state.data.czech_regions.regions;const cheap=sortBy(regions,'petrol95').slice(0,2),expensive=[...regions].sort((a,b)=>(b.petrol95??-Infinity)-(a.petrol95??-Infinity)).slice(0,2);
+  qs('#regionHighlights').innerHTML=[...cheap.map(r=>`<div class="region-card"><span class="small">LOWER PETROL SNAPSHOT</span><button class="entity-link" data-region="${r.code}">${r.name}</button><span>${fmt(r.petrol95)} Kč/l</span></div>`),...expensive.map(r=>`<div class="region-card"><span class="small">HIGHER PETROL SNAPSHOT</span><button class="entity-link" data-region="${r.code}">${r.name}</button><span>${fmt(r.petrol95)} Kč/l</span></div>`)].join('');
+  qsa('#regionHighlights [data-region]').forEach(b=>b.addEventListener('click',()=>{flash(b);openEntityDashboard('region',b.dataset.region)}));
   drawRegionalBar('#czSparkline',regions,'petrol95',390);
-  drawCountryFallback('#overviewMap',rows,'petrol95');
+  renderCountryMap('#overviewMap','petrol95',true);
 }
-function colorScale(values){const ext=d3.extent(values.filter(Number.isFinite));return d3.scaleSequential(d3.interpolateViridis).domain(ext[1]===ext[0]?[ext[0]-1,ext[1]+1]:ext);}
-function getGeoCode(p){const raw=p?.NUTS_ID??p?.nuts_id??p?.CNTR_CODE??p?.id??p?.ID??'';return String(raw).slice(0,5);}
-function getCountryCode(p){const raw=p?.CNTR_CODE??p?.NUTS_ID??p?.nuts_id??p?.id??p?.ID??'';const s=String(raw);if(EU_SET.has(s.slice(0,2)))return s.slice(0,2);if(EU_SET.has(s.slice(-2)))return s.slice(-2);const name=String(p?.NAME_ENGL??p?.na_en??p?.name??p?.NAME_LATN??'');return ISO2_FROM_NAME.get(name)||null;}
-async function ensureGeo(type){if(type==='countries'&&state.geoCountries)return state.geoCountries;if(type==='czRegions'&&state.geoRegions)return state.geoRegions;try{const g=await fetch(GEO_URLS[type]).then(r=>r.ok?r.json():Promise.reject(new Error(r.statusText)));if(type==='countries')state.geoCountries=g;else state.geoRegions=g;return g;}catch(e){console.warn('Map geometry unavailable',e);return null;}}
-function drawCountryFallback(selector,rows,key){const el=qs(selector);el.innerHTML='';const w=el.clientWidth||760,h=340,p={l:30,r:30,t:20,b:20},svg=d3.select(el).append('svg').attr('viewBox',`0 0 ${w} ${h}`);const cols=5,rowsN=Math.ceil(EU.length/cols),cw=(w-p.l-p.r)/cols,ch=(h-p.t-p.b)/rowsN;const vals=new Map(rows.map(r=>[r.code,r[key]])),scale=colorScale(rows.map(r=>r[key]));EU.forEach(([code,name],i)=>{const x=p.l+(i%cols)*cw,y=p.t+Math.floor(i/cols)*ch;svg.append('rect').attr('x',x+4).attr('y',y+4).attr('width',cw-8).attr('height',ch-8).attr('fill',scale(vals.get(code))).attr('opacity',.9);svg.append('text').attr('x',x+cw/2).attr('y',y+ch/2-1).attr('text-anchor','middle').text(code).attr('fill','#fff').attr('font-size',11).attr('font-family','IBM Plex Mono').attr('font-weight',800);svg.append('text').attr('x',x+cw/2).attr('y',y+ch/2+15).attr('text-anchor','middle').text(priceText(vals.get(code),state.currency,state.data.fuel.as_of)).attr('fill','#fff').attr('font-size',9).attr('font-family','IBM Plex Mono');});}
 
-async function renderEuMap(){
-  const el=qs('#euMap');el.innerHTML='';const geo=await ensureGeo('countries'),rows=state.data.fuel.countries,key=state.euFuel;
-  if(!geo){drawCountryFallback('#euMap',rows,key);return;}
-  const features=(geo.features||[]).filter(f=>EU_SET.has(getCountryCode(f.properties)));
-  const w=el.clientWidth||760,h=560,svg=d3.select(el).append('svg').attr('viewBox',`0 0 ${w} ${h}`),values=rows.map(r=>r[key]).filter(Number.isFinite),scale=colorScale(values),byCode=new Map(rows.map(r=>[r.code,r]));
-  const projection=d3.geoMercator().fitExtent([[12,12],[w-12,h-12]],{type:'FeatureCollection',features}),path=d3.geoPath(projection);
-  svg.selectAll('path').data(features).join('path').attr('d',path).attr('fill',f=>{const r=byCode.get(getCountryCode(f.properties));return scale(r?.[key]??values[0]);}).attr('stroke','rgba(235,245,249,.58)').attr('stroke-width',.9).on('mousemove',(e,f)=>{const r=byCode.get(getCountryCode(f.properties));showTip(e,`${r?.name||getCountryCode(f.properties)}<br><strong>${priceText(r?.[key],state.currency,state.data.fuel.as_of)}</strong>`)}).on('mouseleave',hideTip);
-  svg.selectAll('text').data(features).join('text').attr('x',f=>path.centroid(f)[0]).attr('y',f=>path.centroid(f)[1]+3).attr('text-anchor','middle').text(f=>getCountryCode(f.properties)).attr('font-size',7).attr('font-family','IBM Plex Mono').attr('fill','#fff').attr('font-weight',700).style('pointer-events','none');
-  setLegend('#euLegend',scale,'LOW','HIGH');
+function colorScale(values){
+  const clean=values.filter(Number.isFinite),ext=d3.extent(clean);let lo=ext[0],hi=ext[1];if(!Number.isFinite(lo)||!Number.isFinite(hi)){lo=0;hi=1;}if(lo===hi){lo-=1;hi+=1;}
+  return d3.scaleLinear().domain([lo,(lo+hi)/2,hi]).range(['#23365f','#d44c5e','#ffb45f']).clamp(true);
 }
+function getGeoCode(p){const raw=p?.NUTS_ID??p?.nuts_id??p?.CNTR_CODE??p?.id??p?.ID??'';return String(raw).slice(0,5).toUpperCase();}
+function getCountryCode(p){const raw=p?.CNTR_CODE??p?.NUTS_ID??p?.nuts_id??p?.id??p?.ID??'';const s=String(raw).toUpperCase();if(EU_SET.has(s.slice(0,2)))return s.slice(0,2);if(EU_SET.has(s.slice(-2)))return s.slice(-2);return null;}
+async function ensureGeo(type){if(type==='countries'&&state.geoCountries)return state.geoCountries;if(type==='czRegions'&&state.geoRegions)return state.geoRegions;try{const g=await loadJson(GEO_URLS[type]);if(type==='countries')state.geoCountries=g;else state.geoRegions=g;return g;}catch(e){console.warn('Map geometry unavailable',e);return null;}}
+
+function countryTooltip(r,key){return `${flagEmoji(r?.code)} ${r?.name||r?.code||'Unknown'}<br><strong>${priceText(r?.[key],state.currency,state.data.fuel.as_of)}</strong><br><span>${fuelLabel(key)} · ${state.data.fuel.as_of}</span>`;}
+function drawCountryFallback(selector,rows,key){
+  const el=qs(selector);el.innerHTML='';const w=el.clientWidth||760,h=340,p={l:18,r:18,t:18,b:18},svg=d3.select(el).append('svg').attr('viewBox',`0 0 ${w} ${h}`),vals=new Map(rows.map(r=>[r.code,r[key]])),scale=colorScale(rows.map(r=>r[key]));
+  const cols=5,rowsN=Math.ceil(EU.length/cols),cw=(w-p.l-p.r)/cols,ch=(h-p.t-p.b)/rowsN;
+  EU.forEach(([code,name],i)=>{const x=p.l+(i%cols)*cw,y=p.t+Math.floor(i/cols)*ch,r=rows.find(x=>x.code===code);svg.append('rect').attr('class','map-cell').attr('x',x+4).attr('y',y+4).attr('width',cw-8).attr('height',ch-8).attr('fill',Number.isFinite(vals.get(code))?scale(vals.get(code)):'#141b2a').on('click',e=>{flash(e.currentTarget);openEntityDashboard('country',code)});svg.append('text').attr('x',x+cw/2).attr('y',y+ch/2-3).attr('text-anchor','middle').text(code).attr('fill','#fff').attr('font-size',10).attr('font-family','IBM Plex Mono').attr('font-weight',800).style('pointer-events','none');svg.append('text').attr('x',x+cw/2).attr('y',y+ch/2+13).attr('text-anchor','middle').text(Number.isFinite(vals.get(code))?priceText(vals.get(code),state.currency,state.data.fuel.as_of):'NR').attr('fill','#e7edf3').attr('font-size',8).attr('font-family','IBM Plex Mono');});
+}
+
+async function renderCountryMap(selector,key,compact=false){
+  const el=qs(selector);el.innerHTML='';const geo=await ensureGeo('countries'),rows=state.data.fuel.countries;
+  if(!geo){drawCountryFallback(selector,rows,key);return;}
+  const features=(geo.features||[]).filter(f=>EU_SET.has(getCountryCode(f.properties))),byCode=new Map(rows.map(r=>[r.code,r])),values=rows.map(r=>r[key]).filter(Number.isFinite),scale=colorScale(values);
+  if(!features.length){drawCountryFallback(selector,rows,key);return;}
+  const w=el.clientWidth||760,h=compact?340:560,svg=d3.select(el).append('svg').attr('viewBox',`0 0 ${w} ${h}`),projection=d3.geoMercator().fitExtent([[10,10],[w-10,h-10]],{type:'FeatureCollection',features}),path=d3.geoPath(projection);
+  svg.selectAll('path').data(features).join('path').attr('class','map-country').attr('d',path).attr('fill',f=>{const r=byCode.get(getCountryCode(f.properties));return Number.isFinite(r?.[key])?scale(r[key]):'#141b2a';}).on('mousemove',(e,f)=>{const r=byCode.get(getCountryCode(f.properties));showTip(e,countryTooltip(r,key));}).on('mouseleave',hideTip).on('click',(e,f)=>{e.stopPropagation();flash(e.currentTarget);openEntityDashboard('country',getCountryCode(f.properties));});
+  svg.selectAll('text').data(features).join('text').attr('class','map-code').attr('x',f=>path.centroid(f)[0]).attr('y',f=>path.centroid(f)[1]+3).attr('text-anchor','middle').text(f=>getCountryCode(f.properties)).attr('font-size',compact?6:7).attr('font-family','IBM Plex Mono').attr('fill','#fff').attr('font-weight',700).style('pointer-events','none');
+  if(!compact)setLegend('#euLegend',scale,'LOW','HIGH');
+}
+
 async function renderCzMap(){
   const el=qs('#czMap');el.innerHTML='';const geo=await ensureGeo('czRegions'),regions=state.data.czech_regions.regions,key=state.czFuel;
   if(!geo){drawCzBubbles();return;}
-  const features=(geo.features||[]).filter(f=>CZ_REGIONS.has(getGeoCode(f.properties))),byCode=new Map(regions.map(r=>[r.code,r])),values=regions.map(r=>r[key]).filter(Number.isFinite),scale=colorScale(values),w=el.clientWidth||760,h=560,svg=d3.select(el).append('svg').attr('viewBox',`0 0 ${w} ${h}`),projection=d3.geoMercator().fitExtent([[25,20],[w-25,h-20]],{type:'FeatureCollection',features}),path=d3.geoPath(projection);
-  svg.selectAll('path').data(features).join('path').attr('d',path).attr('fill',f=>scale(byCode.get(getGeoCode(f.properties))?.[key]??values[0])).attr('stroke','rgba(235,245,249,.8)').attr('stroke-width',1).on('mousemove',(e,f)=>{const r=byCode.get(getGeoCode(f.properties));showTip(e,`${r?.name||getGeoCode(f.properties)}<br><strong>${fmt(r?.[key])} Kč/l</strong>`)}).on('mouseleave',hideTip);
-  svg.selectAll('text').data(features).join('text').attr('x',f=>path.centroid(f)[0]).attr('y',f=>path.centroid(f)[1]+2).attr('text-anchor','middle').text(f=>getGeoCode(f.properties).replace('CZ','')).attr('font-size',7).attr('font-family','IBM Plex Mono').attr('fill','#fff').attr('font-weight',700).style('pointer-events','none');setLegend('#czLegend',scale,'LOW','HIGH');
+  const features=(geo.features||[]).filter(f=>CZ_REGIONS.has(getGeoCode(f.properties))),byCode=new Map(regions.map(r=>[r.code,r])),values=regions.map(r=>r[key]).filter(Number.isFinite),scale=colorScale(values),w=el.clientWidth||760,h=560,svg=d3.select(el).append('svg').attr('viewBox',`0 0 ${w} ${h}`),projection=d3.geoMercator().fitExtent([[18,16],[w-18,h-16]],{type:'FeatureCollection',features}),path=d3.geoPath(projection);
+  svg.selectAll('path').data(features).join('path').attr('class','map-region').attr('d',path).attr('fill',f=>{const r=byCode.get(getGeoCode(f.properties));return Number.isFinite(r?.[key])?scale(r[key]):'#141b2a';}).on('mousemove',(e,f)=>{const r=byCode.get(getGeoCode(f.properties));showTip(e,`${r?.name||getGeoCode(f.properties)}<br><strong>${Number.isFinite(r?.[key])?fmt(r[key])+' Kč/l':'NR'}</strong><br><span>${fuelLabel(key)}</span>`)}).on('mouseleave',hideTip).on('click',(e,f)=>{e.stopPropagation();flash(e.currentTarget);openEntityDashboard('region',getGeoCode(f.properties));});
+  svg.selectAll('text').data(features).join('text').attr('class','map-region-label').attr('x',f=>path.centroid(f)[0]).attr('y',f=>path.centroid(f)[1]+2).attr('text-anchor','middle').text(f=>CZ_REGIONS.get(getGeoCode(f.properties))?.replace(/ kraj$/,'')||'').attr('font-size',7.5).attr('font-family','IBM Plex Mono').attr('fill','#fff').attr('font-weight',700).style('pointer-events','none');
+  setLegend('#czLegend',scale,'LOW','HIGH');
 }
-function drawCzBubbles(){const el=qs('#czMap');el.innerHTML='';const rs=state.data.czech_regions.regions,w=el.clientWidth||760,h=560,svg=d3.select(el).append('svg').attr('viewBox',`0 0 ${w} ${h}`),x=d3.scaleLinear().domain([12,19]).range([50,w-50]),y=d3.scaleLinear().domain([48.5,51]).range([h-35,35]),scale=colorScale(rs.map(r=>r[state.czFuel]).filter(Number.isFinite));svg.append('rect').attr('x',30).attr('y',20).attr('width',w-60).attr('height',h-55).attr('fill','rgba(112,228,208,.02)').attr('stroke','#2a3a52');rs.forEach(r=>{svg.append('circle').attr('cx',x(r.lon)).attr('cy',y(r.lat)).attr('r',18).attr('fill',scale(r[state.czFuel])).attr('stroke','#fff').attr('stroke-opacity',.55);svg.append('text').attr('x',x(r.lon)).attr('y',y(r.lat)+3).attr('text-anchor','middle').text(r.code.slice(2)).attr('fill','#fff').attr('font-size',9).attr('font-family','IBM Plex Mono').attr('font-weight',800);});setLegend('#czLegend',scale,'LOW','HIGH');}
-function setLegend(selector,scale,left,right){const el=qs(selector);const range=Array.from({length:8},(_,i)=>scale.domain()[0]+(scale.domain()[1]-scale.domain()[0])*(i/7));const stops=range.map(v=>d3.color(scale(v)).formatHex()).join(',');el.innerHTML=`<span>${left}</span><div class="legend-bar" style="background:linear-gradient(90deg,${stops})"></div><span>${right}</span>`;}
-function showTip(e,html){const t=qs('#chartTooltip');t.innerHTML=html;t.style.left=`${e.clientX+12}px`;t.style.top=`${e.clientY+12}px`;t.hidden=false;}function hideTip(){qs('#chartTooltip').hidden=true;}
+function drawCzBubbles(){
+  const el=qs('#czMap');el.innerHTML='';const rs=state.data.czech_regions.regions,w=el.clientWidth||760,h=560,svg=d3.select(el).append('svg').attr('viewBox',`0 0 ${w} ${h}`),x=d3.scaleLinear().domain([12,19]).range([50,w-50]),y=d3.scaleLinear().domain([48.5,51]).range([h-35,35]),scale=colorScale(rs.map(r=>r[state.czFuel]).filter(Number.isFinite));
+  rs.forEach(r=>{const cx=x(r.lon),cy=y(r.lat);svg.append('circle').attr('class','map-bubble').attr('cx',cx).attr('cy',cy).attr('r',19).attr('fill',Number.isFinite(r[state.czFuel])?scale(r[state.czFuel]):'#141b2a').on('click',e=>{flash(e.currentTarget);openEntityDashboard('region',r.code)});svg.append('text').attr('x',cx).attr('y',cy+3).attr('text-anchor','middle').text(r.name.replace(/ kraj$/,'')).attr('fill','#fff').attr('font-size',8).attr('font-family','IBM Plex Mono').style('pointer-events','none');});setLegend('#czLegend',scale,'LOW','HIGH');
+}
+function setLegend(selector,scale,left,right){const el=qs(selector);if(!el)return;const d=scale.domain(),lo=d[0],hi=d[d.length-1];const vals=Array.from({length:10},(_,i)=>lo+(hi-lo)*(i/9));const stops=Array.from({length:10},(_,i)=>d3.color(scale(vals[i])).formatHex()).join(',');el.innerHTML=`<span>${left}</span><div class="legend-bar" style="background:linear-gradient(90deg,${stops})"></div><span>${right}</span>`;}
+function showTip(e,html){const t=qs('#chartTooltip');t.innerHTML=html;t.style.left=`${Math.min(e.clientX+14,window.innerWidth-330)}px`;t.style.top=`${Math.min(e.clientY+14,window.innerHeight-100)}px`;t.hidden=false;}
+function hideTip(){qs('#chartTooltip').hidden=true;}
 
-function renderEuTable(){const rows=sortBy(state.data.fuel.countries,state.euFuel);qs('#euAsOf').textContent=`as of ${state.data.fuel.as_of}`;qs('#euTable').innerHTML=`<thead><tr><th>Country</th><th class="num">${fuelLabel(state.euFuel)}</th></tr></thead><tbody>${rows.map(r=>`<tr><td><button class="linklike" data-country="${r.code}">${r.name}</button></td><td class="num">${priceText(r[state.euFuel],state.currency,state.data.fuel.as_of)}</td></tr>`).join('')}</tbody>`;qsa('[data-country]').forEach(b=>b.addEventListener('click',()=>{state.euCountry=b.dataset.country;qs('#euCountrySelect').value=state.euCountry;renderEuHistory();}));
-  const info=fuelHistoryInfo();const fullEnough=(info.selected?.length||0)>=100;qs('#fuelHistoryBadge').textContent=info.oldest?(fullEnough?`ARCHIVE ${info.oldest} → ${info.latest}`:'ARCHIVE BOOTSTRAP · RUN FULL REFRESH'):'ARCHIVE NOT LOADED';qs('#fuelFxNote').textContent=state.currency==='CZK'?currentFxLabel(state.data.fuel.as_of):'Display: EUR · source-native';}
-function renderEuHistory(){const series=state.fuelHistory?.history?.[state.euCountry]||[],key=state.euFuel,all=series.filter(r=>Number.isFinite(r[key]));let data=all;if(state.euWindow!=='all')data=all.slice(-Number(state.euWindow));const el=qs('#euHistoryChart');el.innerHTML='';if(!data.length){el.innerHTML='<div class="empty">No full archive is loaded yet. Run the data-refresh workflow once to backfill the Commission history.</div>';return;}drawDateChart(el,data.map(r=>({date:r.date,value:r[key]})),(v,d)=>fuelValue(v,d.date,state.currency),fuelAxisLabel());}
+function drawRegionalBar(selector,regions,key,height=360){
+  const el=qs(selector);el.innerHTML='';const data=sortBy(regions,key).filter(r=>Number.isFinite(r[key])),w=el.clientWidth||760,h=Math.max(height,data.length*27+52),m={l:182,r:70,t:10,b:26},svg=d3.select(el).append('svg').attr('viewBox',`0 0 ${w} ${h}`),x=d3.scaleLinear().domain([0,d3.max(data,d=>d[key])||1]).nice().range([m.l,w-m.r]),y=d3.scaleBand().domain(data.map(d=>d.name)).range([m.t,h-m.b]).padding(.24),scale=colorScale(data.map(d=>d[key]));
+  svg.append('g').attr('transform',`translate(0,${h-m.b})`).call(d3.axisBottom(x).ticks(5).tickFormat(v=>fmt(v,1))).call(g=>g.selectAll('text').attr('fill','#8395a6').attr('font-size',9).attr('font-family','IBM Plex Mono')).call(g=>g.selectAll('path,line').attr('stroke','#3a2b45'));
+  svg.selectAll('rect').data(data).join('rect').attr('class','bar-hit').attr('x',m.l).attr('y',d=>y(d.name)).attr('width',d=>x(d[key])-m.l).attr('height',y.bandwidth()).attr('fill',d=>scale(d[key])).attr('opacity',.9).on('mousemove',(e,d)=>showTip(e,`${d.name}<br><strong>${fmt(d[key])} Kč/l</strong>`)).on('mouseleave',hideTip).on('click',(e,d)=>{flash(e.currentTarget);openEntityDashboard('region',d.code)});
+  svg.selectAll('.label').data(data).join('text').attr('x',m.l-8).attr('y',d=>y(d.name)+y.bandwidth()/2+4).attr('text-anchor','end').text(d=>d.name.replace(/ kraj$/,'')).attr('fill','#c4ced8').attr('font-size',9).attr('font-family','IBM Plex Mono');
+  svg.selectAll('.val').data(data).join('text').attr('x',d=>x(d[key])+8).attr('y',d=>y(d.name)+y.bandwidth()/2+4).text(d=>fmt(d[key])).attr('fill','#eef3f7').attr('font-size',9).attr('font-family','IBM Plex Mono');
+}
+
+function renderEuTable(){
+  const rows=sortBy(state.data.fuel.countries,state.euFuel),asOf=state.data.fuel.as_of;qs('#euAsOf').textContent=`as of ${asOf}`;
+  qs('#euTable').innerHTML=`<thead><tr><th>Country</th><th class="num">${fuelLabel(state.euFuel)}</th><th class="num">Petrol</th><th class="num">Diesel</th><th class="num">LPG</th></tr></thead><tbody>${rows.map(r=>`<tr><td><button class="entity-link" data-country="${r.code}"><span class="flag">${flagEmoji(r.code)}</span>${r.name}</button></td><td class="num strong-col">${priceText(r[state.euFuel],state.currency,asOf)}</td><td class="num">${priceText(r.petrol95,state.currency,asOf)}</td><td class="num">${priceText(r.diesel,state.currency,asOf)}</td><td class="num">${priceText(r.lpg,state.currency,asOf)}</td></tr>`).join('')}</tbody>`;
+  qsa('#euTable [data-country]').forEach(b=>b.addEventListener('click',()=>{flash(b);openEntityDashboard('country',b.dataset.country)}));
+  const series=state.fuelHistory?.history?.[state.euCountry]||[];const allDates=Object.values(state.fuelHistory?.history||{}).flat().map(x=>x.date).filter(Boolean).sort();const info=series.length;
+  qs('#fuelHistoryBadge').textContent=allDates.length&&info>=100?`ARCHIVE ${allDates[0]} → ${allDates.at(-1)}`:'ARCHIVE INCOMPLETE · OPEN DATA PIPELINE';
+  qs('#fuelFxNote').textContent=state.currency==='CZK'?currentFxLabel(asOf):'Display: EUR · source-native';
+}
+async function renderEuMap(){await renderCountryMap('#euMap',state.euFuel,false);}
+function renderEuHistory(){
+  const series=state.fuelHistory?.history?.[state.euCountry]||[],key=state.euFuel,all=series.filter(r=>Number.isFinite(r[key])),data=windowSlice(all,state.euWindow),el=qs('#euHistoryChart');el.innerHTML='';
+  qs('#euCountrySelect').value=state.euCountry;
+  if(!data.length){el.innerHTML='<div class="empty">No validated archive is loaded for this country. Open the data pipeline and run a full refresh.</div>';return;}
+  drawInteractiveLineChart(el,data,d=>fuelValue(d.value,d.date,state.currency),fuelAxisLabel(),{dateField:'date',valueKey:'value'});
+}
 function fuelAxisLabel(){return state.currency==='CZK'?'Kč/l':'EUR/l';}
 
-function drawRegionalBar(selector,regions,key,height=360){const el=qs(selector);el.innerHTML='';const data=sortBy(regions,key),w=el.clientWidth||760,h=Math.max(height,data.length*25+45),m={l:182,r:64,t:8,b:20},svg=d3.select(el).append('svg').attr('viewBox',`0 0 ${w} ${h}`),x=d3.scaleLinear().domain([0,d3.max(data,d=>d[key])]).nice().range([m.l,w-m.r]),y=d3.scaleBand().domain(data.map(d=>d.name)).range([m.t,h-m.b]).padding(.2);svg.append('g').attr('transform',`translate(0,${h-m.b})`).call(d3.axisBottom(x).ticks(5).tickFormat(v=>fmt(v,1))).call(g=>g.selectAll('text').attr('fill','#8194a6').attr('font-size',9).attr('font-family','IBM Plex Mono')).call(g=>g.selectAll('path,line').attr('stroke','#294154'));svg.selectAll('rect').data(data).join('rect').attr('x',m.l).attr('y',d=>y(d.name)).attr('width',d=>x(d[key])-m.l).attr('height',y.bandwidth()).attr('fill','#38bca8').attr('opacity',.78);svg.selectAll('.label').data(data).join('text').attr('x',m.l-8).attr('y',d=>y(d.name)+y.bandwidth()/2+4).attr('text-anchor','end').text(d=>d.name.replace(' kraj','')).attr('fill','#a9bac7').attr('font-size',9).attr('font-family','IBM Plex Mono');svg.selectAll('.val').data(data).join('text').attr('x',d=>x(d[key])+8).attr('y',d=>y(d.name)+y.bandwidth()/2+4).text(d=>`${fmt(d[key])}`).attr('fill','#e7edf3').attr('font-size',9).attr('font-family','IBM Plex Mono');}
-function renderCzTable(){const rows=sortBy(state.data.czech_regions.regions,state.czFuel);qs('#czTableAsOf').textContent=`as of ${state.data.czech_regions.as_of}`;qs('#czTable').innerHTML=`<thead><tr><th>Region</th><th class="num">${fuelLabel(state.czFuel)}</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.name}</td><td class="num">${Number.isFinite(r[state.czFuel])?fmt(r[state.czFuel])+' Kč/l':'—'}</td></tr>`).join('')}</tbody>`;qs('#czHistoryBadge').textContent=state.data.czech_regions.history?.length?`REGIONAL ARCHIVE · ${state.data.czech_regions.history.length} snapshots`:'REGIONAL ARCHIVE · latest only';drawRegionalBar('#czBarChart',state.data.czech_regions.regions,state.czFuel,360);renderCzMap();}
-
-function periodToDate(period){const m=String(period||'').match(/^(\d{4})[-_](?:S|H)([12])$/i);if(m)return new Date(Date.UTC(Number(m[1]),Number(m[2])===2?6:0,1));return new Date(period);}
-function drawDateChart(el,data,transform,label){
-  const prepared=data.map(d=>({...d,_date:d.date?new Date(`${d.date}T00:00:00Z`):periodToDate(d.period),_value:transform(d.value,d)})).filter(d=>d._date instanceof Date && !Number.isNaN(d._date.valueOf()) && Number.isFinite(d._value));
-  if(!prepared.length){el.innerHTML='<div class="empty">No observations available for this display currency.</div>';return;}
-  const w=el.clientWidth||900,h=390,m={l:62,r:24,t:26,b:48},svg=d3.select(el).append('svg').attr('viewBox',`0 0 ${w} ${h}`),x=d3.scaleTime().domain(d3.extent(prepared,d=>d._date)).range([m.l,w-m.r]),y=d3.scaleLinear().domain(d3.extent(prepared,d=>d._value)).nice().range([h-m.b,m.t]);
-  svg.append('g').attr('transform',`translate(0,${h-m.b})`).call(d3.axisBottom(x).ticks(7).tickFormat(d3.timeFormat('%b %Y'))).call(g=>g.selectAll('text').attr('fill','#8395a6').attr('font-size',9).attr('font-family','IBM Plex Mono')).call(g=>g.selectAll('path,line').attr('stroke','#294154'));
-  svg.append('g').attr('transform',`translate(${m.l},0)`).call(d3.axisLeft(y).ticks(6).tickFormat(v=>fmt(v,2))).call(g=>g.selectAll('text').attr('fill','#8395a6').attr('font-size',9).attr('font-family','IBM Plex Mono')).call(g=>g.selectAll('path,line').attr('stroke','#294154'));
-  svg.append('path').datum(prepared).attr('fill','none').attr('stroke','#70e4d0').attr('stroke-width',2.1).attr('d',d3.line().x(d=>x(d._date)).y(d=>y(d._value)).curve(d3.curveMonotoneX));
-  svg.append('text').attr('x',w-m.r).attr('y',17).attr('text-anchor','end').attr('fill','#8395a6').attr('font-size',9).attr('font-family','IBM Plex Mono').text(`${label} · ${prepared.length.toLocaleString('en-GB')} obs.`);
+function renderCzTable(){
+  const rows=sortBy(state.data.czech_regions.regions,state.czFuel);qs('#czTableAsOf').textContent=`as of ${state.data.czech_regions.as_of}`;
+  qs('#czTable').innerHTML=`<thead><tr><th>Region</th><th class="num">${fuelLabel(state.czFuel)}</th><th class="num">Petrol</th><th class="num">Diesel</th><th class="num">LPG</th></tr></thead><tbody>${rows.map(r=>`<tr><td><button class="entity-link" data-region="${r.code}"><span class="region-code">${r.code}</span>${r.name}</button></td><td class="num strong-col">${Number.isFinite(r[state.czFuel])?fmt(r[state.czFuel])+' Kč/l':'NR'}</td><td class="num">${Number.isFinite(r.petrol95)?fmt(r.petrol95)+' Kč/l':'NR'}</td><td class="num">${Number.isFinite(r.diesel)?fmt(r.diesel)+' Kč/l':'NR'}</td><td class="num">${Number.isFinite(r.lpg)?fmt(r.lpg)+' Kč/l':'NR'}</td></tr>`).join('')}</tbody>`;
+  qsa('#czTable [data-region]').forEach(b=>b.addEventListener('click',()=>{flash(b);openEntityDashboard('region',b.dataset.region)}));
+  const count=state.data.czech_regions.history?.length||0;
+  qs('#czHistoryBadge').textContent=state.czFuel==='lpg' && rows.every(r=>!Number.isFinite(r.lpg))?'REGIONAL ARCHIVE · LPG NOT REPORTED':(count?`REGIONAL ARCHIVE · ${count} snapshots`:'REGIONAL ARCHIVE · latest only');
+  drawRegionalBar('#czBarChart',state.data.czech_regions.regions,state.czFuel,360);renderCzMap();
 }
 
-function renderGas(){const hist=state.gas?.history||{},entries=Object.entries(hist).map(([code,series])=>({code,series,last:series?.at(-1)?.value})).filter(d=>Number.isFinite(d.last)),names=new Map(EU.map(([c,n])=>[c,n]));names.set('EU27','EU-27');qs('#gasCountrySelect').innerHTML=entries.sort((a,b)=>(names.get(a.code)||a.code).localeCompare(names.get(b.code)||b.code)).map(d=>`<option value="${d.code}">${names.get(d.code)||d.code}</option>`).join('');if(!entries.some(d=>d.code===state.gasCountry))state.gasCountry=entries.some(d=>d.code==='CZ')?'CZ':entries[0]?.code||'CZ';qs('#gasCountrySelect').value=state.gasCountry;const series=hist[state.gasCountry]||[],latest=series.at(-1)?.value,previous=series.at(-2)?.value,period=series.at(-1)?.period,fxDate=periodToDate(period).toISOString().slice(0,10);qs('#gasMetrics').innerHTML=[metric('Latest',gasPriceText(latest,fxDate),state.gas?.band||''),metric('Semester change',Number.isFinite(latest)&&Number.isFinite(previous)?`${fmt((latest/previous-1)*100,1)}%`:'—','versus previous semester'),metric('Tax basis','All taxes','Eurostat I_TAX'),metric('History',state.gas?.history_from||'—',`latest ${state.gas?.as_of||'—'}`)].join('');qs('#gasAsOf').textContent=period||'';const gasFull=Object.values(hist).some(series=>series.length>=10);qs('#gasHistoryBadge').textContent=state.gas?.history_from?(gasFull?`ARCHIVE ${state.gas.history_from} → ${state.gas.as_of}`:'ARCHIVE BOOTSTRAP · RUN FULL REFRESH'):'ARCHIVE NOT LOADED';qs('#gasFxNote').textContent=state.currency==='CZK'?`EUR/CZK conversion anchored to period date`:'Display: EUR · source-native';qs('#gasUnitNote').textContent=state.currency==='CZK'?'Kč/kWh · ECB date-matched':'EUR/kWh · source-native';qs('#gasChart').innerHTML='';if(series.length)drawDateChart(qs('#gasChart'),series.map(x=>({period:x.period,value:x.value})),(v,d)=>state.currency==='CZK'?(Number.isFinite(eurCzk(periodToDate(d.period).toISOString().slice(0,10)))?v*eurCzk(periodToDate(d.period).toISOString().slice(0,10)):null):v,state.currency==='CZK'?'Kč/kWh':'EUR/kWh');else qs('#gasChart').innerHTML='<div class="empty">No gas history available.</div>';const table=entries.sort((a,b)=>b.last-a.last);qs('#gasTable').innerHTML=`<thead><tr><th>Country</th><th class="num">${state.currency==='CZK'?'Kč/kWh':'EUR/kWh'}</th><th>Latest</th></tr></thead><tbody>${table.map(d=>`<tr><td>${names.get(d.code)||d.code}</td><td class="num">${gasPriceText(d.last,periodToDate(d.series.at(-1)?.period).toISOString().slice(0,10))}</td><td>${d.series.at(-1)?.period||'—'}</td></tr>`).join('')}</tbody>`;}
-function renderBrent(){const h=state.oil?.history||[],last=h.at(-1)?.value,prev=h.at(-2)?.value,delta=Number.isFinite(last)&&Number.isFinite(prev)?last-prev:null;qs('#brentMetrics').innerHTML=[metric('Latest',brentText(last,h.at(-1)?.date),state.oil?.as_of||''),metric('1-day move',delta!=null?(state.currency==='CZK'?(Number.isFinite(usdCzk(h.at(-1)?.date))?`${delta*usdCzk(h.at(-1)?.date)>=0?'+':''}${fmt(delta*usdCzk(h.at(-1)?.date),0)} Kč`:'—'):`${delta>=0?'+':''}$${fmt(delta,2)}`):'—',state.currency==='CZK'?'approx. observation-date FX':'USD/barrel'),metric('Series','DCOILBRENTEU','EIA via FRED'),metric('History',state.oil?.history_from||'—',`latest ${state.oil?.as_of||'—'}`)].join('');qs('#brentHistoryBadge').textContent=state.oil?.history_from?((state.oil?.history?.length||0)>=1000?`ARCHIVE ${state.oil.history_from} → ${state.oil.as_of}`:'ARCHIVE BOOTSTRAP · RUN FULL REFRESH'):'ARCHIVE NOT LOADED';qs('#brentFxNote').textContent=state.currency==='CZK'?'USD/CZK from ECB reference-rate history':'Display: USD · source-native';qs('#brentUnitNote').textContent=state.currency==='CZK'?'Kč/bbl · ECB date-matched':'USD/barrel';qs('#brentChart').innerHTML='';if(h.length)drawDateChart(qs('#brentChart'),h,(v,d)=>state.currency==='CZK'?(Number.isFinite(usdCzk(d.date))?v*usdCzk(d.date):null):v,state.currency==='CZK'?'Kč/bbl':'USD/bbl');}
-function renderSources(){const f=state.data?.fuel,cz=state.data?.czech_regions,g=state.gas,o=state.oil,fx=state.fx;const cards=[['European Commission','Weekly Oil Bulletin','Weekly national consumer prices for petroleum products; the historical import reads the published 2005-onwards workbook.','https://energy.ec.europa.eu/data-and-analysis/weekly-oil-bulletin_en',f?.as_of,`Primary · history from ${f?.history_from||'—'}`],['Eurostat','nrg_pc_202','Household natural gas price statistics, D2, EUR/kWh, I_TAX (all taxes and levies included).','https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/nrg_pc_202',g?.as_of,`Primary · history from ${g?.history_from||'—'}`],['U.S. EIA / FRED','DCOILBRENTEU','Europe Brent Spot Price FOB, daily, USD/barrel.','https://fred.stlouisfed.org/series/DCOILBRENTEU',o?.as_of,`Primary series / distributor · history from ${o?.history_from||'—'}`],['ECB','Reference exchange rates','Daily EUR/CZK and USD/CZK history used only for user-selected Czech-koruna display.','https://data.ecb.europa.eu/data/datasets/EXR',fx?.as_of,`FX series · history from ${fx?.history_from||'—'}`],['Czech regional feed','Czech regions','Secondary public regional averages; the source states the data are from Czech Statistical Office reporting.','https://cenaphm.cz/data.json',cz?.as_of,`Secondary · ${cz?.history?.length||0} snapshots retained`],['European Commission GISCO','NUTS 2024 geometry','Map boundaries, trimmed to the European geographic theater for the EU map.','https://gisco-services.ec.europa.eu/distribution/v1/nuts-2024.html','NUTS 2024','Map geometry']];qs('#sourceCards').innerHTML=cards.map(c=>`<div class="source-card"><div class="eyebrow">${c[5]}</div><h3>${c[0]} · ${c[1]}</h3><p>${c[2]}</p><a href="${c[3]}" target="_blank" rel="noopener noreferrer">OPEN SOURCE ↗</a><div class="small">Reference: ${c[4]||'—'}</div></div>`).join('');}
-function renderActive(){const active=qs('.tab.active')?.dataset.view;if(active==='overview')renderOverview();if(active==='eu-fuel'){renderEuTable();renderEuMap();renderEuHistory();}if(active==='czechia')renderCzTable();if(active==='gas')renderGas();if(active==='brent')renderBrent();if(active==='sources')renderSources();}
-function initControls(){qsa('.tab').forEach(btn=>btn.addEventListener('click',()=>switchView(btn.dataset.view)));qsa('[data-go]').forEach(btn=>btn.addEventListener('click',()=>switchView(btn.dataset.go)));qs('#themeToggle').addEventListener('click',()=>{document.documentElement.classList.toggle('light');localStorage.setItem('theme',document.documentElement.classList.contains('light')?'light':'dark');});if(localStorage.getItem('theme')==='light')document.documentElement.classList.add('light');qs('#currencyEur').addEventListener('click',()=>setCurrency('EUR'));qs('#currencyCzk').addEventListener('click',()=>setCurrency('CZK'));qs('#euFuelSelect').addEventListener('change',e=>{state.euFuel=e.target.value;renderActive();});qs('#euHistoryWindow').addEventListener('change',e=>{state.euWindow=e.target.value;renderEuHistory();});qs('#euCountrySelect').addEventListener('change',e=>{state.euCountry=e.target.value;renderEuHistory();});qs('#czFuelSelect').addEventListener('change',e=>{state.czFuel=e.target.value;renderCzTable();});qs('#gasCountrySelect').addEventListener('change',e=>{state.gasCountry=e.target.value;renderGas();});}
-function setCurrency(currency){state.currency=currency;qs('#currencyEur').classList.toggle('active',currency==='EUR');qs('#currencyCzk').classList.toggle('active',currency==='CZK');renderActive();}
+function drawInteractiveLineChart(el,data,transform,label,opts={}){
+  el.innerHTML='';
+  const prepared=data.map(d=>{const dt=opts.dateField==='date'?dateForPoint(d):periodToDate(d.period);const value=transform(d);return {...d,_date:dt,_value:value};}).filter(d=>d._date instanceof Date&&!Number.isNaN(d._date.valueOf())&&Number.isFinite(d._value)).sort((a,b)=>a._date-b._date);
+  if(!prepared.length){el.innerHTML='<div class="empty">No observations available in this display currency.</div>';return;}
+  const w=Math.max(el.clientWidth||900,620),h=390,m={l:64,r:26,t:30,b:52},svg=d3.select(el).append('svg').attr('viewBox',`0 0 ${w} ${h}`).attr('class','interactive-chart');let xDomain=d3.extent(prepared,d=>d._date);if(+xDomain[0]===+xDomain[1])xDomain=[new Date(+xDomain[0]-86400000),new Date(+xDomain[1]+86400000)];
+  const x=d3.scaleTime().domain(xDomain).range([m.l,w-m.r]),y=d3.scaleLinear().domain(d3.extent(prepared,d=>d._value)).nice().range([h-m.b,m.t]);
+  svg.append('g').attr('class','grid-x').attr('transform',`translate(0,${h-m.b})`).call(d3.axisBottom(x).ticks(7).tickFormat(d3.timeFormat('%b %Y'))).call(g=>g.selectAll('text').attr('fill','#8793a5').attr('font-size',9).attr('font-family','IBM Plex Mono')).call(g=>g.selectAll('path,line').attr('stroke','#342b42'));
+  svg.append('g').attr('transform',`translate(${m.l},0)`).call(d3.axisLeft(y).ticks(6).tickFormat(v=>fmt(v,2))).call(g=>g.selectAll('text').attr('fill','#8793a5').attr('font-size',9).attr('font-family','IBM Plex Mono')).call(g=>g.selectAll('path,line').attr('stroke','#342b42'));
+  const line=d3.line().x(d=>x(d._date)).y(d=>y(d._value)).curve(d3.curveMonotoneX);svg.append('path').datum(prepared).attr('class','history-line').attr('d',line);
+  const focus=svg.append('g').style('display','none');focus.append('line').attr('class','crosshair').attr('y1',m.t).attr('y2',h-m.b);focus.append('circle').attr('class','focus-dot').attr('r',4.5);
+  const bisect=d3.bisector(d=>d._date).left;const overlay=svg.append('rect').attr('x',m.l).attr('y',m.t).attr('width',w-m.l-m.r).attr('height',h-m.t-m.b).attr('fill','transparent').style('cursor','crosshair');
+  overlay.on('pointerenter',()=>focus.style('display',null)).on('pointermove',(event)=>{const [px]=d3.pointer(event);const dt=x.invert(px),i=Math.max(0,Math.min(prepared.length-1,bisect(prepared,dt)));const d=prepared[i];const cx=x(d._date),cy=y(d._value);focus.attr('transform',`translate(${cx},0)`);focus.select('.crosshair').attr('y2',h-m.b);focus.select('.focus-dot').attr('cy',cy);showTip(event,`${d3.timeFormat('%d %b %Y')(d._date)}<br><strong>${fmt(d._value,3)} ${label}</strong>`);}).on('pointerleave',()=>{focus.style('display','none');hideTip();});
+  svg.append('text').attr('x',w-m.r).attr('y',18).attr('text-anchor','end').attr('fill','#8c98ab').attr('font-size',9).attr('font-family','IBM Plex Mono').text(`${label} · ${prepared.length.toLocaleString('en-GB')} obs. · HOVER TO INSPECT`);
+}
+
+function renderGas(){
+  const hist=state.gas?.history||{},entries=Object.entries(hist).map(([code,series])=>({code,series,last:series?.at(-1)?.value})).filter(d=>Number.isFinite(d.last)),names=new Map(EU);names.set('EU27','EU-27');
+  qs('#gasCountrySelect').innerHTML=entries.sort((a,b)=>(names.get(a.code)||a.code).localeCompare(names.get(b.code)||b.code)).map(d=>`<option value="${d.code}">${flagEmoji(d.code==='EU27'?'EU':d.code)} ${names.get(d.code)||d.code}</option>`).join('');
+  if(!entries.some(d=>d.code===state.gasCountry))state.gasCountry=entries.some(d=>d.code==='CZ')?'CZ':entries[0]?.code||'CZ';qs('#gasCountrySelect').value=state.gasCountry;
+  const series=hist[state.gasCountry]||[],latest=series.at(-1)?.value,previous=series.at(-2)?.value,period=series.at(-1)?.period,fxDate=period?periodToDate(period).toISOString().slice(0,10):null;
+  qs('#gasMetrics').innerHTML=[metric('Latest',gasPriceText(latest,fxDate),state.gas?.band||''),metric('Semester change',Number.isFinite(latest)&&Number.isFinite(previous)?`${fmt((latest/previous-1)*100,1)}%`:'—','versus previous semester'),metric('Tax basis','All taxes','Eurostat I_TAX'),metric('History',state.gas?.history_from||'—',`latest ${state.gas?.as_of||'—'}`)].join('');
+  qs('#gasAsOf').textContent=period||'';qs('#gasHistoryBadge').textContent=state.gas?.history_from?`ARCHIVE ${state.gas.history_from} → ${state.gas.as_of}`:'ARCHIVE NOT LOADED';qs('#gasFxNote').textContent=state.currency==='CZK'?'EUR/CZK conversion anchored to period date':'Display: EUR · source-native';qs('#gasUnitNote').textContent=state.currency==='CZK'?'Kč/kWh · ECB date-matched':'EUR/kWh · source-native';
+  const data=windowSlice(series,state.gasWindow);qs('#gasChart').innerHTML='';if(data.length)drawInteractiveLineChart(qs('#gasChart'),data,d=>{const dt=periodToDate(d.period).toISOString().slice(0,10);return state.currency==='CZK'?(Number.isFinite(eurCzk(dt))?d.value*eurCzk(dt):NaN):d.value;},state.currency==='CZK'?'Kč/kWh':'EUR/kWh',{dateField:'period'});else qs('#gasChart').innerHTML='<div class="empty">No gas history available.</div>';
+  const table=entries.sort((a,b)=>b.last-a.last);qs('#gasTable').innerHTML=`<thead><tr><th>Country</th><th class="num">${state.currency==='CZK'?'Kč/kWh':'EUR/kWh'}</th><th>Latest</th></tr></thead><tbody>${table.map(d=>`<tr><td><button class="entity-link" data-country="${d.code}"><span class="flag">${flagEmoji(d.code==='EU27'?'EU':d.code)}</span>${names.get(d.code)||d.code}</button></td><td class="num">${gasPriceText(d.last,periodToDate(d.series.at(-1)?.period).toISOString().slice(0,10))}</td><td>${d.series.at(-1)?.period||'—'}</td></tr>`).join('')}</tbody>`;qsa('#gasTable [data-country]').forEach(b=>b.addEventListener('click',()=>{if(EU_SET.has(b.dataset.country)){flash(b);openEntityDashboard('country',b.dataset.country);}}));
+}
+
+function renderBrent(){
+  const h=state.oil?.history||[],last=h.at(-1)?.value,prev=h.at(-2)?.value,delta=Number.isFinite(last)&&Number.isFinite(prev)?last-prev:null;
+  qs('#brentMetrics').innerHTML=[metric('Latest',brentText(last,h.at(-1)?.date),state.oil?.as_of||''),metric('1-day move',delta!=null?(state.currency==='CZK'&&Number.isFinite(usdCzk(h.at(-1)?.date))?`${delta*usdCzk(h.at(-1)?.date)>=0?'+':''}${fmt(delta*usdCzk(h.at(-1)?.date),0)} Kč`:`${delta>=0?'+':''}$${fmt(delta,2)}`):'—',state.currency==='CZK'?'observation-date FX':'USD/barrel'),metric('Series','DCOILBRENTEU','EIA via FRED'),metric('History',state.oil?.history_from||'—',`latest ${state.oil?.as_of||'—'}`)].join('');
+  qs('#brentHistoryBadge').textContent=state.oil?.history_from?`ARCHIVE ${state.oil.history_from} → ${state.oil.as_of}`:'ARCHIVE NOT LOADED';qs('#brentFxNote').textContent=state.currency==='CZK'?'USD/CZK from ECB reference-rate history':'Display: USD · source-native';qs('#brentUnitNote').textContent=state.currency==='CZK'?'Kč/bbl · ECB date-matched':'USD/barrel';
+  const data=windowSlice(h,state.brentWindow);qs('#brentChart').innerHTML='';if(data.length)drawInteractiveLineChart(qs('#brentChart'),data,d=>state.currency==='CZK'?(Number.isFinite(usdCzk(d.date))?d.value*usdCzk(d.date):NaN):d.value,state.currency==='CZK'?'Kč/bbl':'USD/bbl',{dateField:'date'});
+}
+
+function entityName(kind,id){if(kind==='country')return EU_NAMES.get(id)||id;return CZ_REGIONS.get(id)||id;}
+function entityCurrent(kind,id){if(kind==='country')return state.data?.fuel?.countries?.find(x=>x.code===id)||{};return state.data?.czech_regions?.regions?.find(x=>x.code===id)||{};}
+function entitySeries(kind,id,key){
+  if(kind==='country')return (state.fuelHistory?.history?.[id]||[]).filter(r=>Number.isFinite(r[key]));
+  return (state.data?.czech_regions?.history||[]).map(snapshot=>{const row=(snapshot.regions||[]).find(r=>r.code===id);return row&&Number.isFinite(row[key])?{date:snapshot.as_of,value:row[key]}:null;}).filter(Boolean);
+}
+function openEntityDashboard(kind,id){
+  if(!id)return;
+  state.modal.kind=kind;state.modal.id=id;state.modal.metric=Number.isFinite(entityCurrent(kind,id).petrol95)?'petrol95':(Number.isFinite(entityCurrent(kind,id).diesel)?'diesel':'lpg');state.modal.window='all';renderEntityModal();qs('#entityModal').hidden=false;document.body.classList.add('modal-open');
+}
+function closeEntityDashboard(){qs('#entityModal').hidden=true;document.body.classList.remove('modal-open');hideTip();}
+function renderEntityModal(){
+  const {kind,id}=state.modal,name=entityName(kind,id),cur=entityCurrent(kind,id),keys=['petrol95','diesel','lpg'];
+  qs('#entityModalKicker').textContent=kind==='country'?'COUNTRY DASHBOARD // NATIONAL FUEL':'REGIONAL DASHBOARD // CZECHIA NUTS 3';
+  qs('#entityModalTitle').textContent=name;qs('#entityModalMeta').textContent=kind==='country'?`${flagEmoji(id)} ${id} · European Commission weekly series`:`${id} · Czech regional secondary feed`;
+  qs('#entityModalMetrics').innerHTML=keys.map(k=>metric(fuelLabel(k),kind==='country'?priceText(cur[k],state.currency,state.data.fuel.as_of):(Number.isFinite(cur[k])?fmt(cur[k])+' Kč/l':'NR'),kind==='country'?fuelUnit(k):'source-native Kč/l')).join('');
+  const availableKeys = keys.filter(k => kind==='country' ? state.fuelHistory?.history?.[id]?.some(r=>Number.isFinite(r[k])) : state.data?.czech_regions?.regions?.some(r=>r.code===id && Number.isFinite(r[k])));
+  if(!availableKeys.length) availableKeys.push(state.modal.metric);
+  if(!availableKeys.includes(state.modal.metric)) state.modal.metric=availableKeys[0];
+  qs('#entityMetricSelect').innerHTML=availableKeys.map(k=>`<option value="${k}" ${state.modal.metric===k?'selected':''}>${fuelLabel(k)}</option>`).join('');qs('#entityWindowSelect').value=state.modal.window;
+  const series=entitySeries(kind,id,state.modal.metric),data=windowSlice(series,state.modal.window),chart=qs('#entityChart');chart.innerHTML='';
+  qs('#entityArchiveBadge').textContent=series.length?`${series.length.toLocaleString('en-GB')} observations`:'NO VALIDATED OBSERVATIONS';
+  qs('#entitySourceNote').textContent=kind==='country'?'Primary weekly national price series · click/hover the chart to inspect dates and values.':'Regional feed · historical values are dated snapshots. LPG is shown only where a genuine regional observation exists; current zero placeholders are treated as not reported.';
+  if(data.length){
+    drawInteractiveLineChart(chart,data,d=>kind==='country'?fuelValue(d.value,d.date,state.currency):d.value,kind==='country'?fuelAxisLabel():'Kč/l',{dateField:'date'});
+    qs('#entityRecentTable').innerHTML=`<thead><tr><th>Date</th><th class="num">${fuelLabel(state.modal.metric)}</th></tr></thead><tbody>${data.slice(-18).reverse().map(d=>`<tr><td>${d.date||'—'}</td><td class="num">${kind==='country'?priceText(d.value,state.currency,d.date):fmt(d.value)+' Kč/l'}</td></tr>`).join('')}</tbody>`;
+  }else{
+    chart.innerHTML='<div class="empty">No observations are published for this fuel in this entity.</div>';qs('#entityRecentTable').innerHTML='<tbody><tr><td>NO DATA REPORTED</td><td class="num">NR</td></tr></tbody>';
+  }
+}
+
+function renderSources(){
+  const f=state.data?.fuel,cz=state.data?.czech_regions,g=state.gas,o=state.oil,fx=state.fx;
+  const cards=[
+    ['European Commission','Weekly Oil Bulletin','Weekly national consumer prices for petroleum products. Current values are published weekly; the application keeps the validated historical archive.','https://energy.ec.europa.eu/data-and-analysis/weekly-oil-bulletin_en',f?.as_of,`Primary · history from ${f?.history_from||'—'}`],
+    ['Archive transport','EC bulletin mirror','Validated flattened archive mirror used only when the Commission workbook layout cannot be parsed safely; the mirror states the underlying source is the EC Weekly Oil Bulletin.','https://huggingface.co/datasets/FionnHughes/eu-weekly-oil-bulletin',f?.observation_count,`Fallback archive · ${f?.archive_mirror_url?'enabled':'not used'}`],
+    ['Eurostat','nrg_pc_202','Household natural-gas price statistics, D2, EUR/kWh, I_TAX (all taxes and levies included).','https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/nrg_pc_202',g?.as_of,`Primary · history from ${g?.history_from||'—'}`],
+    ['U.S. EIA / FRED','DCOILBRENTEU','Europe Brent Spot Price FOB, daily, USD/barrel.','https://fred.stlouisfed.org/series/DCOILBRENTEU',o?.as_of,`Primary series / distributor · history from ${o?.history_from||'—'}`],
+    ['ECB','Reference exchange rates','Daily EUR/CZK and USD/CZK history used for date-matched Czech-koruna display.','https://data.ecb.europa.eu/data/datasets/EXR',fx?.as_of,`FX series · history from ${fx?.history_from||'—'}`],
+    ['Czech regional feed','Czech regions','Secondary regional averages; current source reports LPG as a zero field, so the app treats it as not reported instead of inventing prices.','https://cenaphm.cz/data.json',cz?.as_of,`Secondary · ${cz?.history?.length||0} snapshots retained`],
+    ['European Commission GISCO','NUTS 2024 geometry','Map boundaries; the EU map is clipped to the European geographic theatre so overseas territories do not shrink the continental view.','https://gisco-services.ec.europa.eu/distribution/v1/nuts-2024.html','NUTS 2024','Map geometry']
+  ];
+  qs('#sourceCards').innerHTML=cards.map(c=>`<div class="source-card"><div class="eyebrow">${c[5]}</div><h3>${c[0]} · ${c[1]}</h3><p>${c[2]}</p><a href="${c[3]}" target="_blank" rel="noopener noreferrer">OPEN SOURCE ↗</a><div class="small">Reference: ${c[4]||'—'}</div></div>`).join('');
+  const pipeline=qs('#pipelineButton');if(pipeline){pipeline.href=RUNTIME.actionsUrl||'#';pipeline.classList.toggle('disabled',!RUNTIME.actionsUrl);}
+}
+
+function renderActive(){
+  const active=qs('.tab.active')?.dataset.view;
+  if(active==='overview')renderOverview();
+  if(active==='eu-fuel'){renderEuTable();renderEuMap();renderEuHistory();}
+  if(active==='czechia')renderCzTable();
+  if(active==='gas')renderGas();
+  if(active==='brent')renderBrent();
+  if(active==='sources')renderSources();
+}
+function setCurrency(currency){state.currency=currency;qs('#currencyEur').classList.toggle('active',currency==='EUR');qs('#currencyCzk').classList.toggle('active',currency==='CZK');renderActive();if(!qs('#entityModal').hidden)renderEntityModal();}
 function switchView(view){qsa('.tab').forEach(b=>b.classList.toggle('active',b.dataset.view===view));qsa('.view').forEach(v=>v.classList.toggle('active',v.id===`view-${view}`));renderActive();window.scrollTo({top:0,behavior:'smooth'});}
-async function boot(){initControls();const [data,fuelHistory,gas,oil,fx]=await Promise.all([loadJson('./data/current.json'),loadJson('./data/fuel-history.json'),loadJson('./data/gas.json'),loadJson('./data/oil.json'),loadJson('./data/fx.json')]);state.data=data;state.fuelHistory=fuelHistory;state.gas=gas;state.oil=oil;state.fx=fx;buildFxLookup();setStatus();qs('#euCountrySelect').innerHTML=EU.map(([c,n])=>`<option value="${c}">${n}</option>`).join('');qs('#euCountrySelect').value='CZ';renderOverview();renderSources();}
-boot().catch(err=>{console.error(err);const b=qs('#freshnessBadge');b.textContent='Data load failed';b.classList.remove('ok');document.querySelector('main').insertAdjacentHTML('afterbegin',`<div class="panel" style="margin-bottom:14px;border-color:#8e4b54"><strong>Data files could not be loaded.</strong><div style="color:var(--muted);margin-top:4px">The site itself is intact, but one or more JSON assets are missing. Run the repository's data-refresh workflow after deployment.</div></div>`);});
+function initControls(){
+  qsa('.tab').forEach(btn=>btn.addEventListener('click',()=>switchView(btn.dataset.view)));
+  qsa('[data-go]').forEach(btn=>btn.addEventListener('click',()=>switchView(btn.dataset.go)));
+  qs('#themeToggle').addEventListener('click',()=>{document.documentElement.classList.toggle('light');localStorage.setItem('theme',document.documentElement.classList.contains('light')?'light':'dark');});
+  if(localStorage.getItem('theme')==='light')document.documentElement.classList.add('light');
+  qs('#currencyEur').addEventListener('click',()=>setCurrency('EUR'));qs('#currencyCzk').addEventListener('click',()=>setCurrency('CZK'));
+  qs('#euFuelSelect').addEventListener('change',e=>{state.euFuel=e.target.value;renderActive();});qs('#euHistoryWindow').addEventListener('change',e=>{state.euWindow=e.target.value;renderEuHistory();});qs('#euCountrySelect').addEventListener('change',e=>{state.euCountry=e.target.value;renderEuHistory();});
+  qs('#czFuelSelect').addEventListener('change',e=>{state.czFuel=e.target.value;renderCzTable();});
+  qs('#gasCountrySelect').addEventListener('change',e=>{state.gasCountry=e.target.value;renderGas();});qs('#gasHistoryWindow').addEventListener('change',e=>{state.gasWindow=e.target.value;renderGas();});
+  qs('#brentHistoryWindow').addEventListener('change',e=>{state.brentWindow=e.target.value;renderBrent();});
+  qs('#entityMetricSelect').addEventListener('change',e=>{state.modal.metric=e.target.value;renderEntityModal();});qs('#entityWindowSelect').addEventListener('change',e=>{state.modal.window=e.target.value;renderEntityModal();});
+  qs('#entityModalClose').addEventListener('click',closeEntityDashboard);qs('#entityModal').addEventListener('click',e=>{if(e.target.id==='entityModal')closeEntityDashboard();});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!qs('#entityModal').hidden)closeEntityDashboard();});
+}
+
+async function boot(){
+  initControls();
+  const [data,fuelHistory,gas,oil,fx]=await Promise.all([loadJson('./data/current.json'),loadJson('./data/fuel-history.json'),loadJson('./data/gas.json'),loadJson('./data/oil.json'),loadJson('./data/fx.json')]);
+  state.data=data;state.fuelHistory=fuelHistory;state.gas=gas;state.oil=oil;state.fx=fx;buildFxLookup();setStatus();
+  qs('#euCountrySelect').innerHTML=EU.map(([c,n])=>`<option value="${c}">${flagEmoji(c)} ${n}</option>`).join('');qs('#euCountrySelect').value='CZ';
+  renderOverview();renderSources();
+}
+boot().catch(err=>{console.error(err);const b=qs('#freshnessBadge');b.textContent='DATA LOAD FAILED · OPEN PIPELINE';b.classList.remove('ok');b.href=RUNTIME.actionsUrl||'#';document.querySelector('main').insertAdjacentHTML('afterbegin',`<div class="panel" style="margin-bottom:14px;border-color:#8e304a"><strong>Validated data assets could not be loaded.</strong><div style="color:var(--muted);margin-top:4px">Run the repository's full data-refresh workflow. The repository now fails validation rather than silently leaving the dashboard on bootstrap data.</div></div>`);});

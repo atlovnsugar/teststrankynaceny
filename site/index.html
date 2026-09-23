@@ -28,7 +28,7 @@
         <button id="currencyEur" class="switch active">EUR</button>
         <button id="currencyCzk" class="switch">KČ</button>
       </div>
-      <span id="freshnessBadge" class="status-badge muted"><i></i>Loading feed…</span>
+      <a id="freshnessBadge" class="status-badge muted" href="#" target="_blank" rel="noopener noreferrer"><i></i>Loading feed…</a>
       <button id="themeToggle" class="icon-btn" aria-label="Toggle light/dark theme">◐</button>
     </div>
   </header>
@@ -105,7 +105,7 @@
       <div class="section-heading"><div><div class="eyebrow">EUROSTAT · NRG_PC_202</div><h1>Household natural gas prices</h1><p>Consumer gas price for Eurostat band D2 (20–199 GJ/year), including all taxes and levies. The underlying series is half-yearly from 2007 onward.</p></div><div class="controls-row"><label>Country<select id="gasCountrySelect"></select></label></div></div>
       <div class="signal-row"><span id="gasHistoryBadge" class="signal">STATISTICAL ARCHIVE</span><span id="gasFxNote" class="signal muted-signal"></span></div>
       <div class="metric-grid" id="gasMetrics"></div>
-      <section class="panel"><div class="panel-header"><div><span class="eyebrow">HISTORY</span><h2>Half-year price trend</h2></div><span class="panel-note" id="gasUnitNote"></span></div><div id="gasChart" class="chart-large"></div></section>
+      <section class="panel"><div class="panel-header"><div><span class="eyebrow">HISTORY</span><h2>Half-year price trend</h2></div><div class="controls-row"><label>Window<select id="gasHistoryWindow"><option value="4">2 years</option><option value="10">5 years</option><option value="20">10 years</option><option value="all">All history</option></select></label><span class="panel-note" id="gasUnitNote"></span></div></div><div id="gasChart" class="chart-large"></div></section>
       <section class="panel"><div class="panel-header"><div><span class="eyebrow">CURRENT SNAPSHOT</span><h2>Country prices</h2></div><span class="panel-note" id="gasAsOf"></span></div><div class="table-wrap"><table id="gasTable"></table></div></section>
     </section>
 
@@ -113,19 +113,39 @@
       <div class="section-heading"><div><div class="eyebrow">EIA / FRED · DAILY SERIES</div><h1>Brent crude</h1><p>Europe Brent Spot Price FOB. Native source unit is USD/barrel; the KČ display uses the ECB's historical reference-rate series for USD/CZK.</p></div></div>
       <div class="signal-row"><span id="brentHistoryBadge" class="signal">DAILY ARCHIVE</span><span id="brentFxNote" class="signal muted-signal"></span></div>
       <div class="metric-grid" id="brentMetrics"></div>
-      <section class="panel"><div class="panel-header"><div><span class="eyebrow">DAILY HISTORY</span><h2>Brent price</h2></div><span class="panel-note" id="brentUnitNote"></span></div><div id="brentChart" class="chart-large"></div></section>
+      <section class="panel"><div class="panel-header"><div><span class="eyebrow">DAILY HISTORY</span><h2>Brent price</h2></div><div class="controls-row"><label>Window<select id="brentHistoryWindow"><option value="30">1 month</option><option value="252">1 year</option><option value="1260">5 years</option><option value="all">All history</option></select></label><span class="panel-note" id="brentUnitNote"></span></div></div><div id="brentChart" class="chart-large"></div></section>
     </section>
 
     <section class="view" id="view-sources">
       <div class="section-heading"><div><div class="eyebrow">METHOD / PROVENANCE / OSINT</div><h1>Sources, refresh and limits</h1><p>The application separates primary statistical series from the secondary Czech regional layer and never fabricates a missing observation.</p></div></div>
       <div class="source-cards" id="sourceCards"></div>
-      <section class="panel"><div class="panel-header"><div><span class="eyebrow">OPERATIONS</span><h2>How the data stays current</h2></div></div><div class="prose"><p><strong>EU fuels:</strong> every refresh reads the European Commission's full "Price developments 2005 onwards" workbook, rebuilds the weekly national history, then exposes the newest week as the current snapshot. The Commission states that its Weekly Oil Bulletin contains weekly consumer prices for petroleum products across EU countries.</p><p><strong>Natural gas:</strong> the refresh reads Eurostat <code>nrg_pc_202</code>, selecting D2, EUR/kWh and I_TAX. The interface keeps the full half-year series rather than only the latest semester.</p><p><strong>CZK conversion:</strong> the app does not use a hard-coded exchange rate. It imports the ECB's daily EUR/CZK and USD/CZK reference-rate history and uses the rate at, or immediately before, each observation date.</p><p><strong>Czech regions:</strong> the public regional source reports averages by Czech region and cites Czech Statistical Office data. Its history is retained as dated snapshots when available; if the feed fails, the previous known-good snapshot stays on screen.</p><p><strong>Europe map:</strong> NUTS 2024 country geometry is filtered to the European geographic theater before publication, removing overseas departments and distant non-European EU territories from the overview map while retaining Mediterranean EU member states.</p><p><strong>Deployment:</strong> GitHub Pages serves the static site; GitHub Actions performs the weekly ETL and commits refreshed data. There is no database or paid backend.</p></div></section>
+      <section class="panel"><div class="panel-header"><div><span class="eyebrow">OPERATIONS</span><h2>How the data stays current</h2></div><a id="pipelineButton" class="primary" href="#" target="_blank" rel="noopener noreferrer">OPEN REFRESH PIPELINE ↗</a></div><div class="prose"><p><strong>EU fuels:</strong> every refresh reads the European Commission's full "Price developments 2005 onwards" workbook, rebuilds the weekly national history, then exposes the newest week as the current snapshot. The Commission states that its Weekly Oil Bulletin contains weekly consumer prices for petroleum products across EU countries.</p><p><strong>Natural gas:</strong> the refresh reads Eurostat <code>nrg_pc_202</code>, selecting D2, EUR/kWh and I_TAX. The interface keeps the full half-year series rather than only the latest semester.</p><p><strong>CZK conversion:</strong> the app does not use a hard-coded exchange rate. It imports the ECB's daily EUR/CZK and USD/CZK reference-rate history and uses the rate at, or immediately before, each observation date.</p><p><strong>Czech regions:</strong> the public regional source reports averages by Czech region and cites Czech Statistical Office data. Its history is retained as dated snapshots when available; if the feed fails, the previous known-good snapshot stays on screen.</p><p><strong>Europe map:</strong> NUTS 2024 country geometry is filtered to the European geographic theater before publication, removing overseas departments and distant non-European EU territories from the overview map while retaining Mediterranean EU member states.</p><p><strong>Deployment:</strong> GitHub Pages serves the static site; GitHub Actions performs the weekly ETL and commits refreshed data. There is no database or paid backend.</p></div></section>
     </section>
   </main>
 
   <footer class="footer"><div>EUROPEAN ENERGY SITUATION ROOM · PUBLIC-DATA MONITOR</div><div>Reference values are national/sector averages, not live station quotes.</div></footer>
+
+  <div id="entityModal" class="entity-modal-backdrop" hidden>
+    <section class="entity-modal panel" role="dialog" aria-modal="true" aria-labelledby="entityModalTitle">
+      <div class="entity-modal-head">
+        <div><div id="entityModalKicker" class="eyebrow">COUNTRY DASHBOARD</div><h2 id="entityModalTitle">Entity</h2><div id="entityModalMeta" class="modal-meta"></div></div>
+        <button id="entityModalClose" class="icon-btn modal-close" aria-label="Close dashboard">×</button>
+      </div>
+      <div class="metric-grid modal-metrics" id="entityModalMetrics"></div>
+      <div class="modal-controls">
+        <label>Fuel<select id="entityMetricSelect"></select></label>
+        <label>Window<select id="entityWindowSelect"><option value="26">6 months</option><option value="52">1 year</option><option value="260">5 years</option><option value="520">10 years</option><option value="all">All history</option></select></label>
+        <span id="entityArchiveBadge" class="signal"></span>
+      </div>
+      <div id="entitySourceNote" class="modal-note"></div>
+      <div id="entityChart" class="chart-large modal-chart"></div>
+      <div class="table-wrap modal-history-table"><table id="entityRecentTable"></table></div>
+    </section>
+  </div>
+
   <div id="chartTooltip" class="chart-tooltip" hidden></div>
   <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="./runtime-config.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>

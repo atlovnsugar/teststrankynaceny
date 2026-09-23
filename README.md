@@ -66,12 +66,12 @@ This is required because the refresh workflow needs to push updated files into t
 The refresh workflow runs automatically on its schedule, but you can run it immediately:
 
 1. Open the **Actions** tab.
-2. Select **Refresh energy data**.
+2. Select **Refresh energy data (full archive)**.
 3. Click **Run workflow**.
 4. Leave the branch as `main` and run it.
 5. Open the run and wait for the job to finish.
 
-The workflow is intentionally fail-safe for individual sources: when a source is temporarily unavailable or its structure changes, the script keeps the last known-good dataset and records a warning rather than replacing good data with blanks.
+The refresh is fail-safe at the source level: when one source is temporarily unavailable or its structure changes, the script keeps the last known-good dataset and records a warning. The separate validation gate then prevents GitHub Pages from publishing a partial/bootstrap archive.
 
 ### Step 6 — Watch the deployment
 
@@ -210,3 +210,26 @@ The ETL is intentionally defensive. A parser failure leaves the previous dataset
 ## Important publishing note
 
 GitHub Pages is well suited to this public informational dashboard because it is a static site. GitHub documents Pages as a website-hosting service rather than a general SaaS/backend platform. The project therefore keeps the data ingestion inside GitHub Actions and publishes only static JSON/assets to Pages.
+
+## Important: first deployment and historical backfill
+
+This version deliberately refuses to publish the dashboard when the checked-in datasets are still the compact bootstrap snapshots. The repository may therefore show a failed **Deploy to GitHub Pages** run immediately after you replace the files; that is intentional.
+
+After replacing the repository contents:
+
+1. Open **Actions → Refresh energy data (full archive) → Run workflow**.
+2. Wait for **Validate refreshed archives** to report `DATA VALIDATION OK`.
+3. The workflow commits the refreshed `data/` directory.
+4. That commit automatically starts **Deploy to GitHub Pages**.
+5. The deployed site's top-right **ARCHIVE LIVE** badge links directly to this refresh workflow. If the badge says **BOOTSTRAP · OPEN DATA PIPELINE**, the archive has not passed the validation gate.
+
+The fuel backfill first attempts the European Commission's historical workbook and falls back to a validated flattened mirror of the same Weekly Oil Bulletin series if the workbook layout cannot be parsed safely. The current Commission page explicitly publishes a **Price developments 2005 onwards** workbook.
+
+## Entity dashboards
+
+Countries are clickable in the EU map, fuel tables and natural-gas table. Czech regions are clickable on the Czech map, regional table and regional bars. Clicking opens a modal dashboard with current values, a selectable fuel, a selectable history window and a hoverable historical chart.
+
+## Czech regional LPG
+
+The current public regional feed exposes an LPG field but currently publishes zero placeholders for the regions. The ETL treats those zeros as **not reported** rather than as real prices, so the application intentionally shows `NR` on the Czech regional LPG map/table/dashboard until a genuine regional observation becomes available.
+

@@ -1,6 +1,6 @@
 {
   "name": "eu-energy-price-tracker",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "private": true,
   "description": "Static EU energy price tracker with official-data ETL and GitHub Pages deployment.",
   "scripts": {

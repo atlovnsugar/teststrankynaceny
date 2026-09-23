@@ -35,6 +35,9 @@ jobs:
           test -f data/oil.json
           test -f data/fx.json
 
+      - name: Refuse to deploy bootstrap or partial archives
+        run: python scripts/validate_data.py
+
       - name: Build static site
         run: node scripts/build.mjs
 

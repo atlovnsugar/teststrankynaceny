@@ -62,8 +62,23 @@ def test_overseas_map_trim() -> None:
     assert len(clipped['features'][0]['geometry']['coordinates']) == 1
 
 
+def test_czech_region_names_and_lpg_absence() -> None:
+    assert u.infer_region_code({'nazev': 'Liberecký kraj'}) == 'CZ051'
+    assert u.infer_region_code({'region': 'Ústecký'}) == 'CZ042'
+    found = {}
+    fixture = {'updated': '2026-09-19', 'kraje': [
+        {'nazev': 'Liberecký kraj', 'n95': 43.2, 'nafta': 47.8, 'lpg': 0},
+        {'nazev': 'Ústecký kraj', 'n95': 42.9, 'nafta': 47.4, 'lpg': 0},
+    ]}
+    u.walk_region_objects(fixture, found)
+    assert found['CZ051']['petrol95'] == 43.2
+    assert found['CZ051']['diesel'] == 47.8
+    assert 'lpg' not in found['CZ051']
+
+
 if __name__ == '__main__':
     test_commission_blocks()
     test_jsonstat_time_axis()
     test_overseas_map_trim()
+    test_czech_region_names_and_lpg_absence()
     print('offline parser checks: OK')

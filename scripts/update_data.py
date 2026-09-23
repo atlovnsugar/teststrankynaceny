@@ -6,6 +6,7 @@ import json
 import math
 import re
 import sys
+import unicodedata
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -48,6 +49,7 @@ REGIONAL_URL = "https://cenaphm.cz/data.json"
 ECB_FX_URL = "https://data-api.ecb.europa.eu/service/data/EXR/{series}"
 NUTS_COUNTRIES_URL = "https://gisco-services.ec.europa.eu/distribution/v2/nuts/geojson/NUTS_RG_20M_2024_4326_LEVL_0.geojson"
 NUTS_REGIONS_URL = "https://gisco-services.ec.europa.eu/distribution/v2/nuts/geojson/NUTS_RG_20M_2024_4326_LEVL_3.geojson"
+FUEL_HISTORY_MIRROR_URL = "https://huggingface.co/datasets/FionnHughes/eu-weekly-oil-bulletin/resolve/main/eu_oil_bulletin.csv"
 
 
 def session() -> requests.Session:
@@ -288,30 +290,62 @@ def parse_legacy_fuel_sheet(raw: pd.DataFrame) -> dict[str, list[dict[str, Any]]
     return dict(records)
 
 
-def parse_fuel_history(s: requests.Session) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]], str]:
-    href, content = find_ec_history_xlsx(s)
-    xl = pd.ExcelFile(io.BytesIO(content))
-    sheet_candidates = [name for name in xl.sheet_names if norm_key(name) in {"priceswithtaxes", "priceswithtax", "priceswithtaxesctr"}]
-    if not sheet_candidates:
-        sheet_candidates = [name for name in xl.sheet_names if "prices with taxes" in name.lower()]
-    if not sheet_candidates:
-        raise RuntimeError(f"Commission history workbook has no 'Prices with taxes' sheet. Sheets: {xl.sheet_names}")
-    sheet = sheet_candidates[0]
-    raw = pd.read_excel(xl, sheet_name=sheet, header=None)
-    records = parse_fuel_sheet(raw)
-    if len(records) < 20:
-        raise RuntimeError(f"Commission fuel history parsed only {len(records)} EU countries from sheet '{sheet}'.")
-    if len(records.get("CZ", [])) < 500:
-        raise RuntimeError(f"Commission fuel history parser returned only {len(records.get('CZ', []))} Czech weekly observations; refusing a partial archive.")
-
-    latest_by_country = {code: series[-1] for code, series in records.items() if series}
-    newest = max(r["date"] for r in latest_by_country.values())
+def _validate_fuel_history_records(records: dict[str, list[dict[str, Any]]]) -> tuple[bool, str]:
+    country_count = len(records)
+    cz_count = len(records.get("CZ", []))
+    lpg_countries = sum(1 for series in records.values() if any("lpg" in row for row in series))
+    if country_count < 20:
+        return False, f"only {country_count} EU countries"
+    if cz_count < 500:
+        return False, f"only {cz_count} Czech weekly observations"
+    if lpg_countries < 12:
+        return False, f"only {lpg_countries} countries with LPG"
+    latest = max((series[-1]["date"] for series in records.values() if series), default=None)
+    if not latest:
+        return False, "no latest observation"
     try:
-        if pd.to_datetime(newest).date() < (datetime.now(timezone.utc).date() - timedelta(days=45)):
-            raise RuntimeError(f"Commission history newest parsed week is {newest}, more than 45 days old; refusing a likely layout/refresh failure.")
-    except ValueError:
-        raise RuntimeError(f"Commission history newest parsed date is invalid: {newest}")
+        latest_dt = pd.to_datetime(latest).date()
+    except Exception:
+        return False, f"invalid latest date {latest}"
+    if latest_dt < datetime.now(timezone.utc).date() - timedelta(days=45):
+        return False, f"latest observation {latest} is stale"
+    return True, "ok"
+
+
+def parse_fuel_history_mirror(s: requests.Session) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]], str]:
+    r = get(s, FUEL_HISTORY_MIRROR_URL)
+    reader = csv.DictReader(io.StringIO(r.text))
+    fuel_map = {
+        "petrol_95": "petrol95",
+        "diesel": "diesel",
+        "lpg": "lpg",
+    }
+    records: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in reader:
+        code = str(row.get("country", "")).strip().upper()
+        fuel = fuel_map.get(str(row.get("fuel_type", "")).strip().lower())
+        date = parse_date(row.get("date"))
+        value = parse_eu_number(row.get("price_eur_per_litre"))
+        if code not in EU_CODES or not fuel or not date or value is None:
+            continue
+        if not (0.1 <= value <= 5):
+            continue
+        records[code].append({"date": date, fuel: round(value, 4)})
+
+    merged: dict[str, list[dict[str, Any]]] = {}
+    for code, series in records.items():
+        by_date: dict[str, dict[str, Any]] = {}
+        for row in series:
+            by_date[row["date"]] = {**by_date.get(row["date"], {}), **row}
+        merged[code] = sorted(by_date.values(), key=lambda x: x["date"])
+
+    ok, reason = _validate_fuel_history_records(merged)
+    if not ok:
+        raise RuntimeError(f"fuel history mirror validation failed: {reason}")
+
+    latest_by_country = {code: series[-1] for code, series in merged.items() if series}
     as_of = max(r["date"] for r in latest_by_country.values())
+    oldest = min(series[0]["date"] for series in merged.values() if series)
     countries = []
     for code, name in EU:
         row = latest_by_country.get(code, {})
@@ -320,22 +354,68 @@ def parse_fuel_history(s: requests.Session) -> tuple[dict[str, Any], dict[str, l
             if key in row:
                 item[key] = row[key]
         countries.append(item)
-
-    oldest = min(series[0]["date"] for series in records.values() if series)
     meta = {
         "as_of": as_of,
         "history_from": oldest,
         "currency": "EUR",
         "unit": "EUR/L",
         "observation_cadence": "weekly",
-        "observation_count": sum(len(series) for series in records.values()),
-        "source": "European Commission Weekly Oil Bulletin — Price developments 2005 onwards",
+        "observation_count": sum(len(series) for series in merged.values()),
+        "source": "European Commission Weekly Oil Bulletin (historical archive mirrored and flattened from the Commission series)",
         "source_url": EC_WEEKLY_URL,
-        "history_source_url": href,
+        "archive_mirror_url": FUEL_HISTORY_MIRROR_URL,
+        "archive_mirror_license": "CC BY 4.0; mirror states the underlying source is the European Commission Weekly Oil Bulletin",
         "countries": countries,
     }
-    return meta, records, href
+    return meta, merged, FUEL_HISTORY_MIRROR_URL
 
+
+def parse_fuel_history(s: requests.Session) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]], str]:
+    # Prefer the Commission's own historical workbook. Its spreadsheet layout has
+    # changed over time, however, so a validated mirror of the same Commission
+    # series is retained as a deterministic fallback rather than leaving the site
+    # silently on bootstrap data.
+    try:
+        href, content = find_ec_history_xlsx(s)
+        xl = pd.ExcelFile(io.BytesIO(content))
+        sheet_candidates = [name for name in xl.sheet_names if norm_key(name) in {"priceswithtaxes", "priceswithtax", "priceswithtaxesctr"}]
+        if not sheet_candidates:
+            sheet_candidates = [name for name in xl.sheet_names if "prices with taxes" in name.lower()]
+        if not sheet_candidates:
+            raise RuntimeError(f"no suitable prices-with-taxes sheet; sheets={xl.sheet_names}")
+        raw = pd.read_excel(xl, sheet_name=sheet_candidates[0], header=None)
+        records = parse_fuel_sheet(raw)
+        ok, reason = _validate_fuel_history_records(records)
+        if not ok:
+            raise RuntimeError(f"Commission workbook parsed only partially: {reason}")
+        latest_by_country = {code: series[-1] for code, series in records.items() if series}
+        as_of = max(r["date"] for r in latest_by_country.values())
+        oldest = min(series[0]["date"] for series in records.values() if series)
+        countries = []
+        for code, name in EU:
+            row = latest_by_country.get(code, {})
+            item = {"code": code, "name": name}
+            for key in ("petrol95", "diesel", "lpg"):
+                if key in row:
+                    item[key] = row[key]
+            countries.append(item)
+        meta = {
+            "as_of": as_of,
+            "history_from": oldest,
+            "currency": "EUR",
+            "unit": "EUR/L",
+            "observation_cadence": "weekly",
+            "observation_count": sum(len(series) for series in records.values()),
+            "source": "European Commission Weekly Oil Bulletin — Price developments 2005 onwards",
+            "source_url": EC_WEEKLY_URL,
+            "history_source_url": href,
+            "countries": countries,
+        }
+        return meta, records, href
+    except Exception as primary_exc:
+        meta, records, href = parse_fuel_history_mirror(s)
+        meta["fallback_reason"] = str(primary_exc)
+        return meta, records, href
 
 def flatten_jsonstat(data: dict[str, Any]) -> list[dict[str, Any]]:
     dims = data["id"]
@@ -482,18 +562,40 @@ def date_from_any(value: Any) -> str | None:
     return parse_date(value)
 
 
+def _strip_diacritics(value: str) -> str:
+    return "".join(ch for ch in unicodedata.normalize("NFKD", value) if not unicodedata.combining(ch))
+
+
+def _region_name_key(value: str) -> str:
+    text = _strip_diacritics(str(value)).casefold().strip()
+    text = re.sub(r"\s+kraj$", "", text)
+    return re.sub(r"[^a-z0-9]+", "", text)
+
+
+REGION_NAME_TO_CODE = {_region_name_key(name): code for code, name in CZ_REGIONS.items()}
+REGION_NAME_TO_CODE.update({_region_name_key(name.replace(" kraj", "")): code for code, name in CZ_REGIONS.items()})
+
+
 def infer_region_code(obj: Any) -> str | None:
     if not isinstance(obj, dict):
         return None
     for k, v in obj.items():
         nk = norm_key(k)
         if nk in {"nuts", "nutsid", "code", "regioncode", "id", "kraj", "region"}:
-            sv = str(v).upper()
+            sv = str(v).upper().strip()
             if sv in CZ_REGIONS:
                 return sv
+            candidate = REGION_NAME_TO_CODE.get(_region_name_key(str(v)))
+            if candidate:
+                return candidate
+    for k, v in obj.items():
+        if isinstance(v, str):
+            candidate = REGION_NAME_TO_CODE.get(_region_name_key(v))
+            if candidate:
+                return candidate
     joined = " ".join(str(v) for v in obj.values() if isinstance(v, (str, int, float)))
     for code, name in CZ_REGIONS.items():
-        if code in joined.upper() or name.lower() in joined.lower():
+        if code in joined.upper() or _region_name_key(name) in _region_name_key(joined):
             return code
     return None
 
@@ -516,8 +618,11 @@ def walk_region_objects(node: Any, out: dict[str, dict[str, Any]], inherited_dat
                 local_date = date_from_any(v) or local_date
         code = infer_region_code(node)
         if code:
-            petrol = infer_metric(node, {"petrol", "benzin", "benz", "natural95", "natural"})
+            petrol = infer_metric(node, {"petrol", "benzin", "benz", "natural95", "natural", "n95"})
             diesel = infer_metric(node, {"diesel", "nafta"})
+            # The current public regional feed exposes LPG fields, but currently
+            # publishes zero rather than a regional observation. Zero is therefore
+            # treated as missing instead of a fabricated price.
             lpg = infer_metric(node, {"lpg"})
             if petrol is not None or diesel is not None or lpg is not None:
                 out[code] = {
@@ -554,11 +659,10 @@ def refresh_czech_regions(s: requests.Session, current: dict[str, Any]) -> bool:
     if len(regions) < 10:
         raise RuntimeError("Regional feed did not contain a sufficiently complete Czech set.")
     old = current.get("czech_regions", {})
-    history = old.get("history", [])
-    if isinstance(history, list):
-        history = [x for x in history if x.get("as_of") != as_of]
-        history.append({"as_of": as_of, "regions": regions})
-        history = sorted(history, key=lambda x: x.get("as_of", ""))[-260:]
+    history = old.get("history", []) if isinstance(old.get("history", []), list) else []
+    history = [x for x in history if x.get("as_of") != as_of]
+    history.append({"as_of": as_of, "regions": regions})
+    history = sorted(history, key=lambda x: x.get("as_of", ""))[-260:]
     current["czech_regions"] = {
         "as_of": as_of,
         "history_from": history[0].get("as_of") if history else as_of,
@@ -566,9 +670,9 @@ def refresh_czech_regions(s: requests.Session, current: dict[str, Any]) -> bool:
         "source_url": REGIONAL_URL,
         "regions": regions,
         "history": history,
+        "notes": "The current regional feed exposes an LPG field but currently reports zero for all regions; zeros are intentionally treated as not reported rather than as prices.",
     }
     return True
-
 
 def point_in_europe(lon: float, lat: float) -> bool:
     # Practical display mask: mainland Europe plus Ireland, UK-adjacent Atlantic edge,

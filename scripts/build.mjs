@@ -16,5 +16,10 @@ for (const dir of ['data', 'data/geo']) {
 }
 
 const builtAt = new Date().toISOString();
-await writeFile(join(dist, 'build-info.json'), JSON.stringify({ builtAt }, null, 2));
+const repository = process.env.GITHUB_REPOSITORY || '';
+const serverUrl = process.env.GITHUB_SERVER_URL || 'https://github.com';
+const actionsUrl = repository ? `${serverUrl}/${repository}/actions/workflows/update-data.yml` : '';
+await writeFile(join(dist, 'build-info.json'), JSON.stringify({ builtAt, repository, actionsUrl }, null, 2));
+await writeFile(join(dist, 'runtime-config.js'), `window.RUNTIME_CONFIG=${JSON.stringify({ repository, actionsUrl, builtAt })};\n`);
 console.log(`Built static site → ${dist}`);
+console.log(`Workflow URL → ${actionsUrl || '(set automatically by GitHub Actions during deployment)'}`);

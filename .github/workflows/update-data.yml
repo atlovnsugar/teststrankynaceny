@@ -40,11 +40,16 @@ jobs:
       - name: Rebuild full public archives
         run: python scripts/update_data.py
 
+      - name: Validate refreshed archives
+        run: python scripts/validate_data.py
+
       - name: Commit refreshed data
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add data/
+          echo "### Energy data refresh" >> "$GITHUB_STEP_SUMMARY"
+          python scripts/validate_data.py >> "$GITHUB_STEP_SUMMARY"
           if git diff --cached --quiet; then
             echo 'No data changes to commit.'
           else
