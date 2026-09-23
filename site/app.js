@@ -26,7 +26,7 @@ const sortBy = (arr,key) => [...arr].sort((a,b)=>(a[key]??Infinity)-(b[key]??Inf
 const flagEmoji = code => { const s=String(code||'').toUpperCase(); if(s==='EU'||s==='EU27') return '🇪🇺'; return s.length===2 ? String.fromCodePoint(...[...s].map(c=>127397+c.charCodeAt(0))) : '◇'; };
 const flagImg = (code,label='') => { const s=String(code||'').toLowerCase(); const asset=s==='eu27'||s==='eu'?'eu':s; if(!/^[a-z]{2}$/.test(asset)) return `<span class=\"flag-code\">${String(code||'—')}</span>`; const alt=String(label||code||'').replace(/\"/g,'&quot;'); return `<img class=\"flag-icon\" src=\"https://flagcdn.com/w40/${asset}.png\" alt=\"${alt} flag\" title=\"${alt}\" loading=\"lazy\" decoding=\"async\" referrerpolicy=\"no-referrer\" onerror=\"this.style.display='none';this.nextElementSibling.style.display='inline-flex'\"><span class=\"flag-code\" style=\"display:none\">${String(code||'—').toUpperCase()}</span>`; };
 
-async function loadJson(path){const r=await fetch(path,{cache:'no-store'});if(!r.ok)throw new Error(`${path}: ${r.status}`);return r.json();}
+async function loadJson(path){const version=RUNTIME.builtAt||'';const joiner=path.includes('?')?'&':'?';const r=await fetch(`${path}${version?joiner+'v='+encodeURIComponent(version):''}`,{cache:'no-store'});if(!r.ok)throw new Error(`${path}: ${r.status}`);return r.json();}
 function buildFxLookup(){
   const eur = new Map((state.fx?.eur_czk||[]).map(x=>[x.date,x.value]));
   const usd = new Map((state.fx?.usd_czk||[]).map(x=>[x.date,x.value]));
