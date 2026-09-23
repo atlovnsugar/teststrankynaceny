@@ -3,33 +3,40 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#0b1220" />
-  <meta name="description" content="EU fuel, natural gas and Brent crude price tracker with Czechia regional detail and historical data." />
-  <title>EU Energy Prices</title>
+  <meta name="theme-color" content="#07111b" />
+  <meta name="description" content="European energy price intelligence: weekly fuels, household gas, Brent crude and Czech regional fuel prices with source-traceable history." />
+  <title>EU Energy Situation Monitor</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="preconnect" href="https://gisco-services.ec.europa.eu" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
+  <div class="scanline"></div>
   <header class="topbar">
     <div class="brand">
-      <div class="brand-mark">EP</div>
+      <div class="brand-mark"><span>EU</span><small>SITREP</small></div>
       <div>
-        <div class="brand-title">EU Energy Prices</div>
-        <div class="brand-subtitle">Fuel · gas · crude · Czechia regions</div>
+        <div class="brand-kicker">SITUATION ROOM // PUBLIC-OPEN DATA</div>
+        <div class="brand-title">EUROPEAN ENERGY SITUATION ROOM</div>
+        <div class="brand-subtitle">FUEL · GAS · CRUDE · REGIONAL SIGNALS / REV. 02</div>
       </div>
     </div>
     <div class="topbar-right">
-      <span id="freshnessBadge" class="status-badge muted">Loading data…</span>
-      <button id="themeToggle" class="icon-btn" aria-label="Toggle dark mode">◐</button>
+      <div class="display-switch" aria-label="Display currency">
+        <button id="currencyEur" class="switch active">EUR</button>
+        <button id="currencyCzk" class="switch">KČ</button>
+      </div>
+      <span id="freshnessBadge" class="status-badge muted"><i></i>Loading feed…</span>
+      <button id="themeToggle" class="icon-btn" aria-label="Toggle light/dark theme">◐</button>
     </div>
   </header>
 
   <main class="shell">
     <nav class="tabs" aria-label="Primary">
-      <button class="tab active" data-view="overview">Overview</button>
+      <div class="tabs-caption">THEATER / EUROPE · STATUS BOARD</div>
+      <button class="tab active" data-view="overview">Situation</button>
       <button class="tab" data-view="eu-fuel">EU fuels</button>
       <button class="tab" data-view="czechia">Czechia</button>
       <button class="tab" data-view="gas">Natural gas</button>
@@ -40,82 +47,85 @@
     <section class="view active" id="view-overview">
       <div class="hero">
         <div>
-          <div class="eyebrow">EUROPEAN ENERGY DASHBOARD</div>
-          <h1>Prices that you can trace back to the source.</h1>
-          <p class="hero-copy">Weekly pump prices from the European Commission, official Eurostat gas statistics, Brent crude, and a Czech regional view. Historical series are updated automatically by GitHub Actions.</p>
+          <div class="eyebrow">SITREP 02 // ENERGY SECURITY &amp; COMMODITIES</div>
+          <h1>Europe, read like a situation room.</h1>
+          <p class="hero-copy">A source-traceable open-source monitor for retail fuel, household gas, Brent crude and Czech regional conditions. The archive is rebuilt from the publishers’ historical series — not a last-value feed dressed up as history.</p>
         </div>
         <div class="hero-actions">
-          <button class="primary" data-go="eu-fuel">Explore EU fuel map</button>
-          <button class="secondary" data-go="czechia">Open Czech regions</button>
+          <button class="primary" data-go="eu-fuel">OPEN THEATER MAP</button>
+          <button class="secondary" data-go="czechia">OPEN CZECH DESK</button>
         </div>
       </div>
 
       <div class="metric-grid" id="overviewMetrics"></div>
 
       <div class="split-grid">
-        <section class="panel">
-          <div class="panel-header"><div><span class="eyebrow">EUROPE</span><h2>Fuel snapshot</h2></div><span class="panel-note" id="fuelAsOf"></span></div>
+        <section class="panel grid-panel">
+          <div class="panel-header"><div><span class="eyebrow">EUROPEAN THEATER</span><h2>Fuel situation</h2></div><span class="panel-note" id="fuelAsOf"></span></div>
           <div class="mini-map" id="overviewMap"></div>
           <div class="table-wrap"><table id="overviewFuelTable"></table></div>
         </section>
 
-        <section class="panel">
-          <div class="panel-header"><div><span class="eyebrow">CZECHIA</span><h2>Regional pulse</h2></div><span class="panel-note" id="czAsOf"></span></div>
+        <section class="panel grid-panel">
+          <div class="panel-header"><div><span class="eyebrow">CZECH DESK · NUTS 3</span><h2>Regional spread</h2></div><span class="panel-note" id="czAsOf"></span></div>
           <div class="region-highlights" id="regionHighlights"></div>
           <div id="czSparkline" class="chart-small"></div>
         </section>
       </div>
 
       <section class="panel source-strip">
-        <div><span class="eyebrow">DATA PROVENANCE</span><h2>Every chart carries its source and reference date.</h2></div>
-        <button class="secondary" data-go="sources">View methodology</button>
+        <div><span class="eyebrow">SOURCE CHAIN</span><h2>Every panel carries a source, reference date and data cadence.</h2></div>
+        <button class="secondary" data-go="sources">VIEW METHODOLOGY</button>
       </section>
     </section>
 
     <section class="view" id="view-eu-fuel">
-      <div class="section-heading"><div><div class="eyebrow">WEEKLY OIL BULLETIN</div><h1>EU fuel prices</h1><p>National average consumer prices, including taxes, in EUR/litre. The underlying series is the European Commission's weekly reporting.</p></div><div class="controls-row">
+      <div class="section-heading"><div><div class="eyebrow">EC / WEEKLY OIL BULLETIN · NATIONAL FIELD</div><h1>EU fuel situation</h1><p>National consumer prices with taxes. The archive importer reads the Commission's published "Price developments 2005 onwards" workbook and keeps the full weekly series for every EU member state it can validate.</p></div><div class="controls-row">
         <label>Fuel<select id="euFuelSelect"><option value="petrol95">Euro 95 petrol</option><option value="diesel">Diesel</option><option value="lpg">LPG</option></select></label>
-        
       </div></div>
+      <div class="signal-row"><span id="fuelHistoryBadge" class="signal">HISTORY CHECK</span><span id="fuelFxNote" class="signal muted-signal"></span></div>
       <div class="map-layout">
         <section class="panel map-panel"><div id="euMap" class="map"></div><div class="legend" id="euLegend"></div></section>
-        <section class="panel side-panel"><div class="panel-header"><div><span class="eyebrow">LATEST</span><h2>Country table</h2></div><span class="panel-note" id="euAsOf"></span></div><div class="table-wrap tall"><table id="euTable"></table></div></section>
+        <section class="panel side-panel"><div class="panel-header"><div><span class="eyebrow">LATEST FIELD REPORT</span><h2>Country table</h2></div><span class="panel-note" id="euAsOf"></span></div><div class="table-wrap tall"><table id="euTable"></table></div></section>
       </div>
-      <section class="panel"><div class="panel-header"><div><span class="eyebrow">HISTORY</span><h2>Selected-country trend</h2></div><div class="controls-row"><label>Country<select id="euCountrySelect"></select></label><label>Window<select id="euHistoryWindow"><option value="26">6 months</option><option value="52">1 year</option><option value="260">5 years</option><option value="all">All history</option></select></label></div></div><div id="euHistoryChart" class="chart-large"></div></section>
+      <section class="panel"><div class="panel-header"><div><span class="eyebrow">ARCHIVE</span><h2>Selected-country trend</h2></div><div class="controls-row"><label>Country<select id="euCountrySelect"></select></label><label>Window<select id="euHistoryWindow"><option value="26">6 months</option><option value="52">1 year</option><option value="260">5 years</option><option value="520">10 years</option><option value="all">All history</option></select></label></div></div><div id="euHistoryChart" class="chart-large"></div></section>
     </section>
 
     <section class="view" id="view-czechia">
-      <div class="section-heading"><div><div class="eyebrow">CZECHIA · NUTS 3</div><h1>Regional fuel prices</h1><p>Fourteen Czech regions with the latest available regional snapshot. When the public regional feed is unavailable, the last successful snapshot remains visible and is date-labelled.</p></div><div class="controls-row"><label>Fuel<select id="czFuelSelect"><option value="petrol95">Natural 95</option><option value="diesel">Nafta / diesel</option><option value="lpg">LPG</option></select></label></div></div>
+      <div class="section-heading"><div><div class="eyebrow">CZECHIA · NUTS 3</div><h1>Regional fuel prices</h1><p>Fourteen Czech regions with the latest public regional snapshot. The trend archive retains successful snapshots whenever the regional feed provides a dated record.</p></div><div class="controls-row"><label>Fuel<select id="czFuelSelect"><option value="petrol95">Natural 95</option><option value="diesel">Nafta / diesel</option><option value="lpg">LPG</option></select></label></div></div>
+      <div class="signal-row"><span id="czHistoryBadge" class="signal">REGIONAL ARCHIVE</span><span class="signal muted-signal">DISPLAY: KČ/L · SOURCE REPORTS NATIVE CZK</span></div>
       <div class="map-layout">
         <section class="panel map-panel"><div id="czMap" class="map"></div><div class="legend" id="czLegend"></div></section>
-        <section class="panel side-panel"><div class="panel-header"><div><span class="eyebrow">REGIONS</span><h2>Regional table</h2></div><span class="panel-note" id="czTableAsOf"></span></div><div class="table-wrap tall"><table id="czTable"></table></div></section>
+        <section class="panel side-panel"><div class="panel-header"><div><span class="eyebrow">REGIONAL FIELD REPORT</span><h2>Regional table</h2></div><span class="panel-note" id="czTableAsOf"></span></div><div class="table-wrap tall"><table id="czTable"></table></div></section>
       </div>
       <section class="panel"><div class="panel-header"><div><span class="eyebrow">COMPARISON</span><h2>Regional spread</h2></div><span class="panel-note">Kč/l</span></div><div id="czBarChart" class="chart-large"></div></section>
     </section>
 
     <section class="view" id="view-gas">
-      <div class="section-heading"><div><div class="eyebrow">EUROSTAT · NRG_PC_202</div><h1>Household natural gas prices</h1><p>Consumer price for Eurostat band D2 (20–199 GJ/year), including all taxes and levies. Frequency is half-yearly rather than weekly.</p></div><div class="controls-row"><label>Country<select id="gasCountrySelect"></select></label></div></div>
+      <div class="section-heading"><div><div class="eyebrow">EUROSTAT · NRG_PC_202</div><h1>Household natural gas prices</h1><p>Consumer gas price for Eurostat band D2 (20–199 GJ/year), including all taxes and levies. The underlying series is half-yearly from 2007 onward.</p></div><div class="controls-row"><label>Country<select id="gasCountrySelect"></select></label></div></div>
+      <div class="signal-row"><span id="gasHistoryBadge" class="signal">STATISTICAL ARCHIVE</span><span id="gasFxNote" class="signal muted-signal"></span></div>
       <div class="metric-grid" id="gasMetrics"></div>
-      <section class="panel"><div class="panel-header"><div><span class="eyebrow">HISTORY</span><h2>Half-year price trend</h2></div><span class="panel-note">EUR/kWh</span></div><div id="gasChart" class="chart-large"></div></section>
+      <section class="panel"><div class="panel-header"><div><span class="eyebrow">HISTORY</span><h2>Half-year price trend</h2></div><span class="panel-note" id="gasUnitNote"></span></div><div id="gasChart" class="chart-large"></div></section>
       <section class="panel"><div class="panel-header"><div><span class="eyebrow">CURRENT SNAPSHOT</span><h2>Country prices</h2></div><span class="panel-note" id="gasAsOf"></span></div><div class="table-wrap"><table id="gasTable"></table></div></section>
     </section>
 
     <section class="view" id="view-brent">
-      <div class="section-heading"><div><div class="eyebrow">EIA / FRED</div><h1>Brent crude oil</h1><p>Europe Brent Spot Price FOB, daily, USD/barrel. The source series is published by the U.S. Energy Information Administration and distributed by FRED.</p></div></div>
+      <div class="section-heading"><div><div class="eyebrow">EIA / FRED · DAILY SERIES</div><h1>Brent crude</h1><p>Europe Brent Spot Price FOB. Native source unit is USD/barrel; the KČ display uses the ECB's historical reference-rate series for USD/CZK.</p></div></div>
+      <div class="signal-row"><span id="brentHistoryBadge" class="signal">DAILY ARCHIVE</span><span id="brentFxNote" class="signal muted-signal"></span></div>
       <div class="metric-grid" id="brentMetrics"></div>
-      <section class="panel"><div class="panel-header"><div><span class="eyebrow">DAILY HISTORY</span><h2>Brent price</h2></div><span class="panel-note">USD/barrel</span></div><div id="brentChart" class="chart-large"></div></section>
+      <section class="panel"><div class="panel-header"><div><span class="eyebrow">DAILY HISTORY</span><h2>Brent price</h2></div><span class="panel-note" id="brentUnitNote"></span></div><div id="brentChart" class="chart-large"></div></section>
     </section>
 
     <section class="view" id="view-sources">
-      <div class="section-heading"><div><div class="eyebrow">METHODOLOGY</div><h1>Sources, refresh and limitations</h1><p>The app is designed around primary statistical sources wherever practical. Secondary Czech regional data is clearly labelled as such.</p></div></div>
+      <div class="section-heading"><div><div class="eyebrow">METHOD / PROVENANCE / OSINT</div><h1>Sources, refresh and limits</h1><p>The application separates primary statistical series from the secondary Czech regional layer and never fabricates a missing observation.</p></div></div>
       <div class="source-cards" id="sourceCards"></div>
-      <section class="panel"><div class="panel-header"><div><span class="eyebrow">OPERATIONS</span><h2>How the data stays current</h2></div></div><div class="prose"><p><strong>Weekly fuel:</strong> a GitHub Actions job downloads the latest European Commission Weekly Oil Bulletin workbook, extracts the 27 EU member states, and commits the normalized JSON files back to the repository.</p><p><strong>Gas:</strong> the same refresh job reads Eurostat's <code>nrg_pc_202</code> API for D2 household prices with <code>I_TAX</code> and <code>EUR/KWh</code>.</p><p><strong>Crude:</strong> the job refreshes the daily EIA Brent Europe series through FRED.</p><p><strong>Czech regions:</strong> the job attempts the public regional feed advertised by cenaPHM.cz. If that secondary feed changes shape or becomes unavailable, the previous successful snapshot is preserved rather than replaced by guessed data.</p><p><strong>Maps:</strong> NUTS geometry is served by the European Commission GISCO service. The UI also keeps a table fallback so data remains usable when a map endpoint is blocked by a browser/network policy.</p></div></section>
+      <section class="panel"><div class="panel-header"><div><span class="eyebrow">OPERATIONS</span><h2>How the data stays current</h2></div></div><div class="prose"><p><strong>EU fuels:</strong> every refresh reads the European Commission's full "Price developments 2005 onwards" workbook, rebuilds the weekly national history, then exposes the newest week as the current snapshot. The Commission states that its Weekly Oil Bulletin contains weekly consumer prices for petroleum products across EU countries.</p><p><strong>Natural gas:</strong> the refresh reads Eurostat <code>nrg_pc_202</code>, selecting D2, EUR/kWh and I_TAX. The interface keeps the full half-year series rather than only the latest semester.</p><p><strong>CZK conversion:</strong> the app does not use a hard-coded exchange rate. It imports the ECB's daily EUR/CZK and USD/CZK reference-rate history and uses the rate at, or immediately before, each observation date.</p><p><strong>Czech regions:</strong> the public regional source reports averages by Czech region and cites Czech Statistical Office data. Its history is retained as dated snapshots when available; if the feed fails, the previous known-good snapshot stays on screen.</p><p><strong>Europe map:</strong> NUTS 2024 country geometry is filtered to the European geographic theater before publication, removing overseas departments and distant non-European EU territories from the overview map while retaining Mediterranean EU member states.</p><p><strong>Deployment:</strong> GitHub Pages serves the static site; GitHub Actions performs the weekly ETL and commits refreshed data. There is no database or paid backend.</p></div></section>
     </section>
   </main>
 
-  <footer class="footer"><div>Built as a static GitHub Pages app. No database or paid backend required.</div><div>Prices are source-labelled; check the source date before making time-sensitive decisions.</div></footer>
-
-  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+  <footer class="footer"><div>EUROPEAN ENERGY SITUATION ROOM · PUBLIC-DATA MONITOR</div><div>Reference values are national/sector averages, not live station quotes.</div></footer>
+  <div id="chartTooltip" class="chart-tooltip" hidden></div>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
   <script src="./app.js"></script>
 </body>
 </html>

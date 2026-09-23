@@ -29,6 +29,11 @@ jobs:
           node --version
           node --check site/app.js
           node --check scripts/build.mjs
+          test -f data/current.json
+          test -f data/fuel-history.json
+          test -f data/gas.json
+          test -f data/oil.json
+          test -f data/fx.json
 
       - name: Build static site
         run: node scripts/build.mjs

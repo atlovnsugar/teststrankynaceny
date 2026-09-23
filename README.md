@@ -1,17 +1,17 @@
 # EU Energy Price Tracker
 
-A static, professional dashboard for EU petroleum prices, Czech regional fuel prices, household natural-gas prices, and Brent crude. It is designed for free deployment on **GitHub Pages**, with **GitHub Actions** refreshing the data automatically.
+A static, source-traceable situation-room dashboard for EU petroleum prices, Czech regional fuel prices, household natural-gas prices, Brent crude, and historical EUR/CZK + USD/CZK conversion. It is designed for free deployment on **GitHub Pages**, with **GitHub Actions** refreshing the data automatically.
 
 ## What is included
 
 - EU-27 weekly petrol / diesel / LPG prices from the **European Commission Weekly Oil Bulletin**.
-- Historical petroleum prices back to the history exposed by the Commission workbook (currently the workbook covers 2005 onward).
+- Full weekly petroleum history back to the oldest date published by the Commission workbook (the publisher labels the archive **2005 onward**). The first post-deployment data-refresh run is a deliberate full backfill, not just a latest-week fetch.
 - Czechia highlighted separately, including its EU-wide national fuel history.
 - Czech NUTS-3 regional fuel-price map/table. Regional data is deliberately labelled as **secondary** rather than presented as an EU official statistic.
 - Household natural-gas prices from **Eurostat `nrg_pc_202`**, using band D2 (20–199 GJ/year), EUR/kWh and `I_TAX` (all taxes and levies included). Eurostat is half-yearly, so the chart is semester-based.
-- Daily Europe Brent Spot Price FOB (`DCOILBRENTEU`) from EIA/FRED.
+- Daily Europe Brent Spot Price FOB (`DCOILBRENTEU`) from EIA/FRED, with the full available daily series retained.
 - Official NUTS 2024 map geometry stored in the repository after each refresh, so the map does not depend on a live third-party tile service.
-- Dark/light theme, responsive layout, tables, charts, data-source page, and date labels.
+- Dark/light theme, responsive tables and charts, an international-relations / Cold-War-era operations-room visual language, source badges, and explicit archive dates.
 
 ## Deployment: no local hosting required
 
@@ -91,8 +91,8 @@ For a repository named `eu-energy-price-tracker`, the normal public URL is:
 
 You do not have to update the JSON files by hand.
 
-- GitHub Actions refreshes the sources every Thursday at **06:00 UTC**.
-- A manual refresh is available at any time from **Actions → Refresh energy data → Run workflow**.
+- GitHub Actions performs a **full archive rebuild** every Friday at **06:15 UTC**, after the Commission's weekly bulletin cycle.
+- A manual refresh is available at any time from **Actions → Refresh energy data (full archive) → Run workflow**.
 - A successful data commit automatically triggers the deployment workflow.
 
 The source cadence is intentionally not forced to daily: the European Commission oil bulletin is weekly, Eurostat household gas prices are half-yearly, and Brent is daily.
@@ -101,11 +101,17 @@ The source cadence is intentionally not forced to daily: the European Commission
 
 ### 1. Petroleum: European Commission Weekly Oil Bulletin
 
+**Historical backfill:** when you deploy the repository for the first time, the checked-in JSON files are only bootstrap content. Run the data workflow once before considering the archive live. That workflow downloads the Commission's historical workbook and rebuilds every EU country's weekly series. The source page explicitly publishes a 'Price developments 2005 onwards' workbook; the parser validates that it sees at least 20 EU countries and a substantial Czech weekly history before replacing the archive.
+
+The user-facing EU Fuel archive selector includes 6 months, 1 year, 5 years, 10 years and **All history**.
+
 This is the primary source used for EU country petrol, diesel and LPG values. The repository parses the Commission's historical workbook rather than copying values from a comparison website. The resulting history is stored as JSON so the public site remains a static app.
 
 The dashboard keeps the source date next to each snapshot and does not interpolate missing source observations.
 
 ### 2. Natural gas: Eurostat
+
+The gas loader requests the complete available time dimension from Eurostat rather than the latest observation. The UI exposes the entire stored semester series for a selected country.
 
 The gas dataset is `nrg_pc_202`. This app fixes the selection to:
 
@@ -118,6 +124,8 @@ This makes comparisons reproducible instead of mixing household-size bands or ta
 
 ### 3. Brent: EIA/FRED
 
+The ETL stores the complete daily CSV response returned by FRED, from the oldest available observation through the newest successful observation.
+
 `DCOILBRENTEU` is used as the daily Europe Brent Spot Price FOB series in USD/barrel. It is a separate market benchmark from retail pump prices.
 
 ### 4. Czech regional fuel prices
@@ -126,7 +134,11 @@ The Czech regional view is deliberately treated as a separate source class. The 
 
 That distinction matters: the European Commission bulletin gives national consumer-price data; it is not a station-by-station Czech NUTS-3 feed.
 
-### 5. Map geometry
+### 5. Currency display
+
+The global **EUR / KČ** switch is a display conversion layer; the source values remain stored in their native units. EUR/CZK and USD/CZK come from the ECB's historical reference-rate series. For a historical chart, the rate at the observation date (or the nearest preceding ECB observation) is used. The app never substitutes 1.00 when FX is missing; the converted value stays blank until a valid rate exists.
+
+### 6. Map geometry
 
 The map uses Eurostat GISCO NUTS 2024 geometry. Country and Czech NUTS-3 GeoJSON files are refreshed into `data/geo/` so the published site can use local geometry.
 
@@ -155,7 +167,7 @@ python -m pip install -r requirements.txt
 python scripts/update_data.py
 ```
 
-The script needs outbound internet access to fetch the public source datasets.
+The script needs outbound internet access to fetch the public source datasets. The historical refresh is intentionally all-or-nothing for the primary series: if a source parser sees an implausibly short archive, it refuses to overwrite the previous dataset.
 
 ## Repository structure
 
@@ -167,11 +179,13 @@ site/styles.css                    styling
 site/app.js                        dashboard logic
 scripts/build.mjs                  static build
 scripts/update_data.py              data ETL
+scripts/test_data_parsers.py        offline parser regression checks
 requirements.txt                   pinned Python ETL dependencies
 data/current.json                  current source snapshots
 data/fuel-history.json             EU petroleum history
 data/gas.json                      Eurostat gas history
 data/oil.json                      Brent history
+data/fx.json                       ECB EUR/CZK + USD/CZK history
 data/geo/*.geojson                 map geometry
 ```
 
@@ -183,7 +197,7 @@ Check that **Settings → Pages → Source** is **GitHub Actions** and that the 
 
 ### The deployment workflow succeeds but the page has no data
 
-Open the repository and verify that `data/current.json`, `data/fuel-history.json`, `data/gas.json`, `data/oil.json`, and the `data/geo/` files exist. Run **Refresh energy data** once and then redeploy.
+Open the repository and verify that `data/current.json`, `data/fuel-history.json`, `data/gas.json`, `data/oil.json`, `data/fx.json`, and the `data/geo/` files exist. Run **Refresh energy data (full archive)** once and then redeploy.
 
 ### The regional Czech map falls back to the simplified visualization
 

@@ -1,0 +1,10 @@
+{
+  "generated_at": null,
+  "as_of": null,
+  "history_from": null,
+  "source": "ECB reference exchange rates",
+  "source_url": "https://data.ecb.europa.eu/data/datasets/EXR",
+  "note": "Bootstrap placeholder only. Run the full data-refresh workflow to populate the complete EUR/CZK and USD/CZK histories.",
+  "eur_czk": [],
+  "usd_czk": []
+}

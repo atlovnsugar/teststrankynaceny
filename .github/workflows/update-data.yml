@@ -1,9 +1,9 @@
-name: Refresh energy data
+name: Refresh energy data (full archive)
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 6 * * 4'
+    - cron: '15 6 * * 5'
   push:
     branches: [main]
     paths:
@@ -34,7 +34,10 @@ jobs:
       - name: Install ETL dependencies
         run: python -m pip install -r requirements.txt
 
-      - name: Refresh public datasets
+      - name: Run offline parser regression checks
+        run: python scripts/test_data_parsers.py
+
+      - name: Rebuild full public archives
         run: python scripts/update_data.py
 
       - name: Commit refreshed data
