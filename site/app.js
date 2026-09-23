@@ -24,6 +24,7 @@ const fuelLabel = k => ({petrol95:'Euro 95 petrol',diesel:'Diesel',lpg:'LPG'})[k
 const fuelUnit = key => key === 'lpg' || key === 'petrol95' || key === 'diesel' ? (state.currency === 'CZK' ? 'Kč/l' : 'EUR/l') : '';
 const sortBy = (arr,key) => [...arr].sort((a,b)=>(a[key]??Infinity)-(b[key]??Infinity));
 const flagEmoji = code => { const s=String(code||'').toUpperCase(); if(s==='EU'||s==='EU27') return '🇪🇺'; return s.length===2 ? String.fromCodePoint(...[...s].map(c=>127397+c.charCodeAt(0))) : '◇'; };
+const flagImg = (code,label='') => { const s=String(code||'').toLowerCase(); const asset=s==='eu27'||s==='eu'?'eu':s; if(!/^[a-z]{2}$/.test(asset)) return `<span class=\"flag-code\">${String(code||'—')}</span>`; const alt=String(label||code||'').replace(/\"/g,'&quot;'); return `<img class=\"flag-icon\" src=\"https://flagcdn.com/w40/${asset}.png\" alt=\"${alt} flag\" title=\"${alt}\" loading=\"lazy\" decoding=\"async\" referrerpolicy=\"no-referrer\" onerror=\"this.style.display='none';this.nextElementSibling.style.display='inline-flex'\"><span class=\"flag-code\" style=\"display:none\">${String(code||'—').toUpperCase()}</span>`; };
 
 async function loadJson(path){const r=await fetch(path,{cache:'no-store'});if(!r.ok)throw new Error(`${path}: ${r.status}`);return r.json();}
 function buildFxLookup(){
@@ -84,7 +85,7 @@ function renderOverview(){
   qs('#fuelAsOf').textContent=`as of ${fuel.as_of}`;
   qs('#czAsOf').textContent=`as of ${state.data.czech_regions.as_of}`;
   const top=sortBy(rows,'petrol95').slice(0,8);
-  qs('#overviewFuelTable').innerHTML=`<thead><tr><th>Country</th><th class="num">Petrol</th><th class="num">Diesel</th></tr></thead><tbody>${top.map(r=>`<tr><td><button class="entity-link" data-country="${r.code}"><span class="flag">${flagEmoji(r.code)}</span>${r.name}</button></td><td class="num">${priceText(r.petrol95,state.currency,fuel.as_of)}</td><td class="num">${priceText(r.diesel,state.currency,fuel.as_of)}</td></tr>`).join('')}</tbody>`;
+  qs('#overviewFuelTable').innerHTML=`<thead><tr><th>Country</th><th class="num">Petrol</th><th class="num">Diesel</th></tr></thead><tbody>${top.map(r=>`<tr><td><button class="entity-link" data-country="${r.code}"><span class="flag">${flagImg(r.code,r.name)}</span>${r.name}</button></td><td class="num">${priceText(r.petrol95,state.currency,fuel.as_of)}</td><td class="num">${priceText(r.diesel,state.currency,fuel.as_of)}</td></tr>`).join('')}</tbody>`;
   qsa('#overviewFuelTable [data-country]').forEach(b=>b.addEventListener('click',()=>{flash(b);openEntityDashboard('country',b.dataset.country)}));
   const regions=state.data.czech_regions.regions;const cheap=sortBy(regions,'petrol95').slice(0,2),expensive=[...regions].sort((a,b)=>(b.petrol95??-Infinity)-(a.petrol95??-Infinity)).slice(0,2);
   qs('#regionHighlights').innerHTML=[...cheap.map(r=>`<div class="region-card"><span class="small">LOWER PETROL SNAPSHOT</span><button class="entity-link" data-region="${r.code}">${r.name}</button><span>${fmt(r.petrol95)} Kč/l</span></div>`),...expensive.map(r=>`<div class="region-card"><span class="small">HIGHER PETROL SNAPSHOT</span><button class="entity-link" data-region="${r.code}">${r.name}</button><span>${fmt(r.petrol95)} Kč/l</span></div>`)].join('');
@@ -145,7 +146,7 @@ function drawRegionalBar(selector,regions,key,height=360){
 
 function renderEuTable(){
   const rows=sortBy(state.data.fuel.countries,state.euFuel),asOf=state.data.fuel.as_of;qs('#euAsOf').textContent=`as of ${asOf}`;
-  qs('#euTable').innerHTML=`<thead><tr><th>Country</th><th class="num">${fuelLabel(state.euFuel)}</th><th class="num">Petrol</th><th class="num">Diesel</th><th class="num">LPG</th></tr></thead><tbody>${rows.map(r=>`<tr><td><button class="entity-link" data-country="${r.code}"><span class="flag">${flagEmoji(r.code)}</span>${r.name}</button></td><td class="num strong-col">${priceText(r[state.euFuel],state.currency,asOf)}</td><td class="num">${priceText(r.petrol95,state.currency,asOf)}</td><td class="num">${priceText(r.diesel,state.currency,asOf)}</td><td class="num">${priceText(r.lpg,state.currency,asOf)}</td></tr>`).join('')}</tbody>`;
+  qs('#euTable').innerHTML=`<thead><tr><th>Country</th><th class="num">${fuelLabel(state.euFuel)}</th><th class="num">Petrol</th><th class="num">Diesel</th><th class="num">LPG</th></tr></thead><tbody>${rows.map(r=>`<tr><td><button class="entity-link" data-country="${r.code}"><span class="flag">${flagImg(r.code,r.name)}</span>${r.name}</button></td><td class="num strong-col">${priceText(r[state.euFuel],state.currency,asOf)}</td><td class="num">${priceText(r.petrol95,state.currency,asOf)}</td><td class="num">${priceText(r.diesel,state.currency,asOf)}</td><td class="num">${priceText(r.lpg,state.currency,asOf)}</td></tr>`).join('')}</tbody>`;
   qsa('#euTable [data-country]').forEach(b=>b.addEventListener('click',()=>{flash(b);openEntityDashboard('country',b.dataset.country)}));
   const series=state.fuelHistory?.history?.[state.euCountry]||[];const allDates=Object.values(state.fuelHistory?.history||{}).flat().map(x=>x.date).filter(Boolean).sort();const info=series.length;
   qs('#fuelHistoryBadge').textContent=allDates.length&&info>=100?`ARCHIVE ${allDates[0]} → ${allDates.at(-1)}`:'ARCHIVE INCOMPLETE · OPEN DATA PIPELINE';
@@ -153,7 +154,7 @@ function renderEuTable(){
 }
 async function renderEuMap(){await renderCountryMap('#euMap',state.euFuel,false);}
 function renderEuHistory(){
-  const series=state.fuelHistory?.history?.[state.euCountry]||[],key=state.euFuel,all=series.filter(r=>Number.isFinite(r[key])),data=windowSlice(all,state.euWindow),el=qs('#euHistoryChart');el.innerHTML='';
+  const series=fuelSeries(state.euCountry,state.euFuel),data=windowSlice(series,state.euWindow),el=qs('#euHistoryChart');el.innerHTML='';
   qs('#euCountrySelect').value=state.euCountry;
   if(!data.length){el.innerHTML='<div class="empty">No validated archive is loaded for this country. Open the data pipeline and run a full refresh.</div>';return;}
   drawInteractiveLineChart(el,data,d=>fuelValue(d.value,d.date,state.currency),fuelAxisLabel(),{dateField:'date',valueKey:'value'});
@@ -192,7 +193,7 @@ function renderGas(){
   qs('#gasMetrics').innerHTML=[metric('Latest',gasPriceText(latest,fxDate),state.gas?.band||''),metric('Semester change',Number.isFinite(latest)&&Number.isFinite(previous)?`${fmt((latest/previous-1)*100,1)}%`:'—','versus previous semester'),metric('Tax basis','All taxes','Eurostat I_TAX'),metric('History',state.gas?.history_from||'—',`latest ${state.gas?.as_of||'—'}`)].join('');
   qs('#gasAsOf').textContent=period||'';qs('#gasHistoryBadge').textContent=state.gas?.history_from?`ARCHIVE ${state.gas.history_from} → ${state.gas.as_of}`:'ARCHIVE NOT LOADED';qs('#gasFxNote').textContent=state.currency==='CZK'?'EUR/CZK conversion anchored to period date':'Display: EUR · source-native';qs('#gasUnitNote').textContent=state.currency==='CZK'?'Kč/kWh · ECB date-matched':'EUR/kWh · source-native';
   const data=windowSlice(series,state.gasWindow);qs('#gasChart').innerHTML='';if(data.length)drawInteractiveLineChart(qs('#gasChart'),data,d=>{const dt=periodToDate(d.period).toISOString().slice(0,10);return state.currency==='CZK'?(Number.isFinite(eurCzk(dt))?d.value*eurCzk(dt):NaN):d.value;},state.currency==='CZK'?'Kč/kWh':'EUR/kWh',{dateField:'period'});else qs('#gasChart').innerHTML='<div class="empty">No gas history available.</div>';
-  const table=entries.sort((a,b)=>b.last-a.last);qs('#gasTable').innerHTML=`<thead><tr><th>Country</th><th class="num">${state.currency==='CZK'?'Kč/kWh':'EUR/kWh'}</th><th>Latest</th></tr></thead><tbody>${table.map(d=>`<tr><td><button class="entity-link" data-country="${d.code}"><span class="flag">${flagEmoji(d.code==='EU27'?'EU':d.code)}</span>${names.get(d.code)||d.code}</button></td><td class="num">${gasPriceText(d.last,periodToDate(d.series.at(-1)?.period).toISOString().slice(0,10))}</td><td>${d.series.at(-1)?.period||'—'}</td></tr>`).join('')}</tbody>`;qsa('#gasTable [data-country]').forEach(b=>b.addEventListener('click',()=>{if(EU_SET.has(b.dataset.country)){flash(b);openEntityDashboard('country',b.dataset.country);}}));
+  const table=entries.sort((a,b)=>b.last-a.last);qs('#gasTable').innerHTML=`<thead><tr><th>Country</th><th class="num">${state.currency==='CZK'?'Kč/kWh':'EUR/kWh'}</th><th>Latest</th></tr></thead><tbody>${table.map(d=>`<tr><td><button class="entity-link" data-country="${d.code}"><span class="flag">${flagImg(d.code==='EU27'?'EU':d.code,names.get(d.code)||d.code)}</span>${names.get(d.code)||d.code}</button></td><td class="num">${gasPriceText(d.last,periodToDate(d.series.at(-1)?.period).toISOString().slice(0,10))}</td><td>${d.series.at(-1)?.period||'—'}</td></tr>`).join('')}</tbody>`;qsa('#gasTable [data-country]').forEach(b=>b.addEventListener('click',()=>{if(EU_SET.has(b.dataset.country)){flash(b);openEntityDashboard('country',b.dataset.country);}}));
 }
 
 function renderBrent(){
@@ -204,8 +205,13 @@ function renderBrent(){
 
 function entityName(kind,id){if(kind==='country')return EU_NAMES.get(id)||id;return CZ_REGIONS.get(id)||id;}
 function entityCurrent(kind,id){if(kind==='country')return state.data?.fuel?.countries?.find(x=>x.code===id)||{};return state.data?.czech_regions?.regions?.find(x=>x.code===id)||{};}
+function fuelSeries(id,key){
+  return (state.fuelHistory?.history?.[id]||[])
+    .map(r=>({date:r.date,value:Number(r[key])}))
+    .filter(r=>r.date&&Number.isFinite(r.value));
+}
 function entitySeries(kind,id,key){
-  if(kind==='country')return (state.fuelHistory?.history?.[id]||[]).filter(r=>Number.isFinite(r[key]));
+  if(kind==='country')return fuelSeries(id,key);
   return (state.data?.czech_regions?.history||[]).map(snapshot=>{const row=(snapshot.regions||[]).find(r=>r.code===id);return row&&Number.isFinite(row[key])?{date:snapshot.as_of,value:row[key]}:null;}).filter(Boolean);
 }
 function openEntityDashboard(kind,id){
@@ -216,7 +222,7 @@ function closeEntityDashboard(){qs('#entityModal').hidden=true;document.body.cla
 function renderEntityModal(){
   const {kind,id}=state.modal,name=entityName(kind,id),cur=entityCurrent(kind,id),keys=['petrol95','diesel','lpg'];
   qs('#entityModalKicker').textContent=kind==='country'?'COUNTRY DASHBOARD // NATIONAL FUEL':'REGIONAL DASHBOARD // CZECHIA NUTS 3';
-  qs('#entityModalTitle').textContent=name;qs('#entityModalMeta').textContent=kind==='country'?`${flagEmoji(id)} ${id} · European Commission weekly series`:`${id} · Czech regional secondary feed`;
+  qs('#entityModalTitle').textContent=name;qs('#entityModalMeta').innerHTML=kind==='country'?`${flagImg(id,name)} <span>${id} · European Commission weekly series</span>`:`<span>${id} · Czech regional secondary feed</span>`;
   qs('#entityModalMetrics').innerHTML=keys.map(k=>metric(fuelLabel(k),kind==='country'?priceText(cur[k],state.currency,state.data.fuel.as_of):(Number.isFinite(cur[k])?fmt(cur[k])+' Kč/l':'NR'),kind==='country'?fuelUnit(k):'source-native Kč/l')).join('');
   const availableKeys = keys.filter(k => kind==='country' ? state.fuelHistory?.history?.[id]?.some(r=>Number.isFinite(r[k])) : state.data?.czech_regions?.regions?.some(r=>r.code===id && Number.isFinite(r[k])));
   if(!availableKeys.length) availableKeys.push(state.modal.metric);
