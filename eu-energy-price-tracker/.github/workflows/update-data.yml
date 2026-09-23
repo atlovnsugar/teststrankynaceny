@@ -1,0 +1,50 @@
+name: Refresh energy data
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 4'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/update_data.py'
+      - 'requirements.txt'
+      - '.github/workflows/update-data.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: energy-data-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.13'
+          cache: pip
+
+      - name: Install ETL dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Refresh public datasets
+        run: python scripts/update_data.py
+
+      - name: Commit refreshed data
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/
+          if git diff --cached --quiet; then
+            echo 'No data changes to commit.'
+          else
+            git commit -m 'chore(data): refresh energy price datasets'
+            git push
+          fi

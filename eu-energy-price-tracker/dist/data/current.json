@@ -1,0 +1,87 @@
+{
+  "generated_at": "2026-09-23T00:00:00Z",
+  "notes": "Seed snapshot. The GitHub Actions refresh workflow replaces this with current source data on first run and thereafter on schedule.",
+  "fuel": {
+    "as_of": "2026-09-14",
+    "currency": "EUR",
+    "unit": "EUR/L",
+    "source": "European Commission Weekly Oil Bulletin (seed values cross-checked against Fuel Prices EU, which cites the Commission)",
+    "source_url": "https://energy.ec.europa.eu/data-and-analysis/weekly-oil-bulletin_en",
+    "countries": [
+      {"code":"AT","name":"Austria","petrol95":1.894,"diesel":2.197},
+      {"code":"BE","name":"Belgium","petrol95":1.976,"diesel":2.290},
+      {"code":"BG","name":"Bulgaria","petrol95":1.620,"diesel":1.856},
+      {"code":"HR","name":"Croatia","petrol95":1.736,"diesel":1.920},
+      {"code":"CY","name":"Cyprus","petrol95":1.650,"diesel":1.915},
+      {"code":"CZ","name":"Czechia","petrol95":1.828,"diesel":1.991,"lpg":0.890},
+      {"code":"DK","name":"Denmark","petrol95":2.564,"diesel":2.502},
+      {"code":"EE","name":"Estonia","petrol95":1.914,"diesel":2.065},
+      {"code":"FI","name":"Finland","petrol95":2.317,"diesel":2.505},
+      {"code":"FR","name":"France","petrol95":2.172,"diesel":2.291},
+      {"code":"DE","name":"Germany","petrol95":2.357,"diesel":2.426},
+      {"code":"GR","name":"Greece","petrol95":2.158,"diesel":2.122},
+      {"code":"HU","name":"Hungary","petrol95":1.714,"diesel":1.919},
+      {"code":"IE","name":"Ireland","petrol95":1.894,"diesel":1.989},
+      {"code":"IT","name":"Italy","petrol95":2.084,"diesel":2.191},
+      {"code":"LV","name":"Latvia","petrol95":1.976,"diesel":2.096},
+      {"code":"LT","name":"Lithuania","petrol95":1.918,"diesel":2.184},
+      {"code":"LU","name":"Luxembourg","petrol95":1.793,"diesel":2.123},
+      {"code":"MT","name":"Malta","petrol95":1.340,"diesel":1.210},
+      {"code":"NL","name":"Netherlands","petrol95":2.434,"diesel":2.494},
+      {"code":"PL","name":"Poland","petrol95":1.822,"diesel":2.005},
+      {"code":"PT","name":"Portugal","petrol95":2.072,"diesel":2.152},
+      {"code":"RO","name":"Romania","petrol95":1.889,"diesel":2.000},
+      {"code":"SK","name":"Slovakia","petrol95":1.808,"diesel":1.924},
+      {"code":"SI","name":"Slovenia","petrol95":1.641,"diesel":1.854},
+      {"code":"ES","name":"Spain","petrol95":1.867,"diesel":1.834},
+      {"code":"SE","name":"Sweden","petrol95":1.514,"diesel":1.981}
+    ]
+  },
+  "czech_regions": {
+    "as_of": "2026-09-09",
+    "source": "CCS (regional average snapshot as published by Czech News Agency / České noviny)",
+    "source_url": "https://www.ceskenoviny.cz/zpravy/pohonne-hmoty-v-cesku-dal-zdrazuji-vlada-se-k-zasahu-nechysta/2872675",
+    "regions": [
+      {"code":"CZ010","name":"Praha","petrol95":45.05,"diesel":48.86,"lat":50.0755,"lon":14.4378},
+      {"code":"CZ020","name":"Středočeský kraj","petrol95":44.42,"diesel":47.99,"lat":49.96,"lon":14.75},
+      {"code":"CZ031","name":"Jihočeský kraj","petrol95":44.00,"diesel":47.70,"lat":49.05,"lon":14.45},
+      {"code":"CZ032","name":"Plzeňský kraj","petrol95":44.35,"diesel":47.86,"lat":49.72,"lon":13.22},
+      {"code":"CZ041","name":"Karlovarský kraj","petrol95":44.07,"diesel":47.74,"lat":50.19,"lon":12.75},
+      {"code":"CZ042","name":"Ústecký kraj","petrol95":44.01,"diesel":47.59,"lat":50.58,"lon":13.78},
+      {"code":"CZ051","name":"Liberecký kraj","petrol95":43.89,"diesel":47.48,"lat":50.77,"lon":15.05},
+      {"code":"CZ052","name":"Královéhradecký kraj","petrol95":44.10,"diesel":47.55,"lat":50.24,"lon":15.83},
+      {"code":"CZ053","name":"Pardubický kraj","petrol95":44.01,"diesel":47.25,"lat":49.95,"lon":16.06},
+      {"code":"CZ063","name":"Vysočina","petrol95":44.38,"diesel":47.86,"lat":49.4,"lon":15.6},
+      {"code":"CZ064","name":"Jihomoravský kraj","petrol95":44.45,"diesel":47.88,"lat":49.1,"lon":16.55},
+      {"code":"CZ071","name":"Olomoucký kraj","petrol95":44.33,"diesel":47.90,"lat":49.59,"lon":17.25},
+      {"code":"CZ072","name":"Zlínský kraj","petrol95":43.94,"diesel":47.59,"lat":49.22,"lon":17.67},
+      {"code":"CZ080","name":"Moravskoslezský kraj","petrol95":44.14,"diesel":47.78,"lat":49.82,"lon":18.27}
+    ],
+    "history": [
+      {"as_of":"2026-09-09","regions":"see regions above"}
+    ]
+  },
+  "natural_gas": {
+    "as_of": "2025-H2",
+    "unit": "EUR/kWh",
+    "band": "D2 (20–199 GJ/year)",
+    "tax": "I_TAX (all taxes and levies included)",
+    "source": "Eurostat nrg_pc_202",
+    "source_url": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/nrg_pc_202",
+    "countries": [{"code":"CZ","name":"Czechia","price":0.0961},{"code":"EU27","name":"EU-27","price":0.1228}]
+  },
+  "brent": {
+    "as_of": "2026-09-15",
+    "unit": "USD/barrel",
+    "source": "U.S. Energy Information Administration via FRED, DCOILBRENTEU",
+    "source_url": "https://fred.stlouisfed.org/series/DCOILBRENTEU",
+    "latest": 130.80,
+    "history": [
+      {"date":"2026-09-09","value":109.51},
+      {"date":"2026-09-10","value":120.98},
+      {"date":"2026-09-11","value":118.06},
+      {"date":"2026-09-14","value":121.25},
+      {"date":"2026-09-15","value":130.80}
+    ]
+  }
+}

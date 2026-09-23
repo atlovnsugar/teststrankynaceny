@@ -1,0 +1,10 @@
+{
+  "name": "eu-energy-price-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static EU energy price tracker with official-data ETL and GitHub Pages deployment.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node --check site/app.js && node --check scripts/build.mjs"
+  }
+}

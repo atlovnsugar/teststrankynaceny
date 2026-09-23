@@ -1,0 +1,13 @@
+{
+  "generated_at": "2026-09-23T00:00:00Z",
+  "source": "U.S. Energy Information Administration via FRED",
+  "source_url": "https://fred.stlouisfed.org/series/DCOILBRENTEU",
+  "unit": "USD/barrel",
+  "history": [
+    {"date":"2026-09-09","value":109.51},
+    {"date":"2026-09-10","value":120.98},
+    {"date":"2026-09-11","value":118.06},
+    {"date":"2026-09-14","value":121.25},
+    {"date":"2026-09-15","value":130.80}
+  ]
+}
