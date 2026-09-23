@@ -9,13 +9,13 @@ on:
     paths:
       - 'scripts/update_data.py'
       - 'scripts/validate_data.py'
+      - 'scripts/refresh_guard.py'
       - 'requirements.txt'
-      - 'scripts/refresh_supply.py'
       - '.github/workflows/update-data.yml'
 
 permissions:
   contents: write
-  actions: write   # needed to start the deploy workflow below
+  actions: write
 
 concurrency:
   group: energy-data-refresh
@@ -40,11 +40,9 @@ jobs:
       - name: Run offline parser regression checks
         run: python scripts/test_data_parsers.py
 
-      - name: Run supply/refresh contract checks
-        run: python scripts/test_supply.py
-
       - name: Rebuild full public archives
         run: python scripts/update_data.py
+
       - name: Show refresh diagnostics
         if: always()
         run: |
@@ -53,6 +51,12 @@ jobs:
           else
             echo 'No refresh-report.json was produced.'
           fi
+
+      # Critical guard: old update_data.py versions could swallow a required
+      # source failure and leave the one-country bootstrap archive in place.
+      # Never allow validate_data.py to run against that state.
+      - name: Verify refresh actually replaced the bootstrap archives
+        run: python scripts/refresh_guard.py
 
       - name: Validate refreshed archives
         run: python scripts/validate_data.py
@@ -74,8 +78,6 @@ jobs:
             echo 'changed=true' >> "$GITHUB_OUTPUT"
           fi
 
-      # Pushes made with GITHUB_TOKEN do NOT trigger other workflows, so the
-      # deploy has to be started explicitly.
       - name: Trigger Pages deployment
         if: steps.commit.outputs.changed == 'true'
         env:
