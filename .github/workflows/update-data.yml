@@ -40,6 +40,9 @@ jobs:
       - name: Run offline parser regression checks
         run: python scripts/test_data_parsers.py
 
+      - name: Run supply/refresh contract checks
+        run: python scripts/test_supply.py
+
       - name: Rebuild full public archives
         run: python scripts/update_data.py
       - name: Show refresh diagnostics

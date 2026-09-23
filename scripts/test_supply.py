@@ -18,3 +18,25 @@ assert 'def eurostat_rows_batched' in text
 assert 'chunk_size=3' in text
 assert 'Request Entity Too Large' in text or '413' in text or 'URL-length' in text
 print('SUPPLY BATCHING REGRESSION OK')
+
+
+# Required archive refreshes must never silently accept a one-country seed archive.
+assert 'hard_failures.append(message)' in text
+required_blocks = [
+    'fuel refresh failed:',
+    'gas refresh failed:',
+    'Supply refresh failed:',
+    'Brent refresh failed:',
+    'FX refresh failed:',
+]
+for marker in required_blocks:
+    pos=text.find(marker)
+    assert pos >= 0, marker
+    window=text[pos:pos+420]
+    assert 'hard_failures.append(message)' in window, marker
+for forbidden in (
+    'keeping previous archive',
+    'keeping previous supply archive',
+):
+    assert forbidden not in text, forbidden
+print('REQUIRED ARCHIVE FAILURE-GATE REGRESSION OK')

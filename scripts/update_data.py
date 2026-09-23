@@ -449,65 +449,34 @@ def parse_fuel_history_official(s: requests.Session) -> tuple[dict[str, Any], di
 
 
 def parse_fuel_history(s: requests.Session) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]], str]:
-    """Build the full weekly fuel archive.
+    """Build the full weekly fuel archive with the Commission workbook first.
 
-    The European Commission Weekly Oil Bulletin is the authoritative source.
-    For stable automated ingestion we use a cleaned, machine-readable mirror of
-    the same Commission series, updated weekly and published with provenance.
-    The Commission page remains the authoritative source URL and is optionally
-    checked against the latest Czech values when the workbook is reachable.
+    The Commission's ``Price developments 2005 onwards`` workbook is the primary
+    source. A machine-readable mirror of the same Weekly Oil Bulletin is used only
+    as a fallback when the official workbook is temporarily unavailable or its layout
+    cannot be parsed. A successful refresh must still pass the full archive validation.
     """
+    official_exc: Exception | None = None
+    try:
+        meta, records, href = parse_fuel_history_official(s)
+        meta["transport_note"] = "Loaded directly from the European Commission Weekly Oil Bulletin historical workbook."
+        meta["official_workbook_verified"] = True
+        return meta, records, href
+    except Exception as exc:
+        official_exc = exc
+        print(f"::warning title=Official fuel workbook failed::{exc}")
+
     try:
         meta, records, href = parse_fuel_history_mirror(s)
     except Exception as mirror_exc:
-        print(f"::warning title=Fuel mirror failed::{mirror_exc}")
-        try:
-            meta, records, href = parse_fuel_history_official(s)
-        except Exception as official_exc:
-            raise RuntimeError(f"mirror: {mirror_exc} | official workbook: {official_exc}") from official_exc
-        meta["mirror_error"] = str(mirror_exc)
-        return meta, records, href
+        raise RuntimeError(f"official workbook: {official_exc} | machine-readable mirror: {mirror_exc}") from mirror_exc
     meta["transport_note"] = (
         "Machine-readable archive from a cleaned mirror of the European Commission "
-        "Weekly Oil Bulletin; Commission source page retained as authoritative reference."
+        "Weekly Oil Bulletin; official workbook was unavailable or could not be parsed "
+        "during this refresh."
     )
-
-    try:
-        official_href, content = find_ec_history_xlsx(s)
-        xl = pd.ExcelFile(io.BytesIO(content))
-        sheet_candidates = [
-            name for name in xl.sheet_names
-            if norm_key(name) in {"priceswithtaxes", "priceswithtax", "priceswithtaxesctr"}
-        ]
-        if not sheet_candidates:
-            sheet_candidates = [name for name in xl.sheet_names if "prices with taxes" in name.lower()]
-        if sheet_candidates:
-            raw = pd.read_excel(xl, sheet_name=sheet_candidates[0], header=None)
-            official_records = parse_fuel_sheet(raw)
-            ok, reason = _validate_fuel_history_records(official_records)
-            if ok:
-                meta["official_workbook_verified"] = True
-                meta["official_workbook_url"] = official_href
-                mirror_cz = records.get("CZ", [])
-                official_cz = official_records.get("CZ", [])
-                if mirror_cz and official_cz:
-                    m, o = mirror_cz[-1], official_cz[-1]
-                    mismatches = {}
-                    for key in ("petrol95", "diesel", "lpg"):
-                        if key in m and key in o and abs(float(m[key]) - float(o[key])) > 0.02:
-                            mismatches[key] = {"mirror": m[key], "official": o[key]}
-                    meta["official_workbook_check"] = (
-                        {"status": "difference_detected", "values": mismatches}
-                        if mismatches else
-                        {"status": "latest_czech_values_within_tolerance"}
-                    )
-            else:
-                meta["official_workbook_verified"] = False
-                meta["official_workbook_check"] = {"status": "verification_failed", "reason": reason}
-    except Exception as exc:
-        meta["official_workbook_verified"] = False
-        meta["official_workbook_check"] = {"status": "verification_unavailable", "reason": str(exc)}
-
+    meta["official_workbook_verified"] = False
+    meta["official_workbook_check"] = {"status": "fallback_used", "reason": str(official_exc)}
     return meta, records, href
 
 def flatten_jsonstat(data: dict[str, Any]) -> list[dict[str, Any]]:
@@ -1083,11 +1052,8 @@ def main() -> int:
         successes.append(f"fuel: {fuel_meta['as_of']} / from {fuel_meta['history_from']} ({len(fuel_records)} countries)")
     except Exception as exc:
         message = f"fuel refresh failed: {exc}"
-        if fuel_history_path.exists():
-            warnings.append(message + " (keeping previous archive)")
-        else:
-            warnings.append(message)
-            hard_failures.append(message)
+        warnings.append(message)
+        hard_failures.append(message)
 
     try:
         gas_meta, gas_all = parse_gas(s)
@@ -1096,11 +1062,8 @@ def main() -> int:
         successes.append(f"gas: {gas_meta['as_of']} / from {gas_meta['history_from']} ({len(gas_all['history'])} series)")
     except Exception as exc:
         message = f"gas refresh failed: {exc}"
-        if gas_path.exists():
-            warnings.append(message + " (keeping previous archive)")
-        else:
-            warnings.append(message)
-            hard_failures.append(message)
+        warnings.append(message)
+        hard_failures.append(message)
 
     try:
         supply = parse_supply(s)
@@ -1109,11 +1072,8 @@ def main() -> int:
         successes.append(f"supply: {supply['meta'].get('supply_from')} → {supply['meta'].get('supply_to')} · oil={len(supply['oil']['petrol95'])} countries")
     except Exception as exc:
         message = f"Supply refresh failed: {exc}"
-        if (DATA / "supply.json").exists():
-            warnings.append(message + " (keeping previous supply archive)")
-        else:
-            warnings.append(message)
-            hard_failures.append(message)
+        warnings.append(message)
+        hard_failures.append(message)
 
     try:
         oil = parse_fred_brent(s)
@@ -1122,11 +1082,8 @@ def main() -> int:
         successes.append(f"Brent: {oil['as_of']} / from {oil['history_from']}")
     except Exception as exc:
         message = f"Brent refresh failed: {exc}"
-        if oil_path.exists():
-            warnings.append(message + " (keeping previous archive)")
-        else:
-            warnings.append(message)
-            hard_failures.append(message)
+        warnings.append(message)
+        hard_failures.append(message)
 
     try:
         fx = parse_fx(s)
@@ -1135,11 +1092,8 @@ def main() -> int:
         successes.append(f"FX: {fx['as_of']} / from {fx['history_from']}")
     except Exception as exc:
         message = f"FX refresh failed: {exc}"
-        if fx_path.exists():
-            warnings.append(message + " (keeping previous archive)")
-        else:
-            warnings.append(message)
-            hard_failures.append(message)
+        warnings.append(message)
+        hard_failures.append(message)
 
     try:
         refresh_czech_regions(s, current)
@@ -1171,6 +1125,7 @@ def main() -> int:
     write_json(current_path, current)
 
     print("EU Energy Price Tracker data refresh")
+    print(f"  ARCHIVE STATE before commit: fuel={len(load_json(fuel_history_path, {}).get('history', {}))} countries · gas={len(load_json(gas_path, {}).get('history', {}))} series · supply_file={(DATA / 'supply.json').exists()}")
     for item in successes:
         print(f"  OK   {item}")
     for item in warnings:
