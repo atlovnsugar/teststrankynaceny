@@ -530,16 +530,32 @@ def parse_gas(s: requests.Session) -> tuple[dict[str, Any], dict[str, Any]]:
     return meta, {"history": dict(history), **meta}
 
 
-def parse_fred_brent(s: requests.Session) -> dict[str, Any]:
-    text = get(s, BRENT_URL).text
-    reader = csv.DictReader(io.StringIO(text))
+def parse_fred_csv(text: str, series_id: str) -> list[dict[str, Any]]:
+    """Parse FRED's fredgraph.csv.
+
+    FRED renamed the date column from ``DATE`` to ``observation_date``; accept both
+    (and fall back to the first column) so a further rename does not break the refresh.
+    Missing observations are published as ``.`` and are skipped.
+    """
+    reader = csv.DictReader(io.StringIO(text.lstrip("\ufeff")))
+    fields = reader.fieldnames or []
+    date_key = next((f for f in fields if f.strip().lower() in {"observation_date", "date"}), fields[0] if fields else None)
+    value_key = next((f for f in fields if f.strip().upper() == series_id.upper()), fields[1] if len(fields) > 1 else None)
+    if not date_key or not value_key:
+        raise RuntimeError(f"Unexpected FRED CSV header: {fields}")
     history = []
     for row in reader:
-        value = parse_eu_number(row.get("DCOILBRENTEU"))
-        date = row.get("DATE")
+        date = parse_date(row.get(date_key))
+        value = parse_eu_number(row.get(value_key))
         if not date or value is None:
             continue
         history.append({"date": date, "value": round(value, 3)})
+    return history
+
+
+def parse_fred_brent(s: requests.Session) -> dict[str, Any]:
+    text = get(s, BRENT_URL).text
+    history = parse_fred_csv(text, "DCOILBRENTEU")
     if len(history) < 1000:
         raise RuntimeError("FRED Brent series returned unexpectedly little history.")
     history.sort(key=lambda x: x["date"])
@@ -795,8 +811,11 @@ def main() -> int:
         successes.append(f"fuel: {fuel_meta['as_of']} / from {fuel_meta['history_from']} ({len(fuel_records)} countries)")
     except Exception as exc:
         message = f"fuel refresh failed: {exc}"
-        warnings.append(message)
-        hard_failures.append(message)
+        if fuel_history_path.exists():
+            warnings.append(message + " (keeping previous archive)")
+        else:
+            warnings.append(message)
+            hard_failures.append(message)
 
     try:
         gas_meta, gas_all = parse_gas(s)
@@ -805,8 +824,11 @@ def main() -> int:
         successes.append(f"gas: {gas_meta['as_of']} / from {gas_meta['history_from']} ({len(gas_all['history'])} series)")
     except Exception as exc:
         message = f"gas refresh failed: {exc}"
-        warnings.append(message)
-        hard_failures.append(message)
+        if gas_path.exists():
+            warnings.append(message + " (keeping previous archive)")
+        else:
+            warnings.append(message)
+            hard_failures.append(message)
 
     try:
         oil = parse_fred_brent(s)
@@ -815,8 +837,11 @@ def main() -> int:
         successes.append(f"Brent: {oil['as_of']} / from {oil['history_from']}")
     except Exception as exc:
         message = f"Brent refresh failed: {exc}"
-        warnings.append(message)
-        hard_failures.append(message)
+        if oil_path.exists():
+            warnings.append(message + " (keeping previous archive)")
+        else:
+            warnings.append(message)
+            hard_failures.append(message)
 
     try:
         fx = parse_fx(s)
@@ -825,8 +850,11 @@ def main() -> int:
         successes.append(f"FX: {fx['as_of']} / from {fx['history_from']}")
     except Exception as exc:
         message = f"FX refresh failed: {exc}"
-        warnings.append(message)
-        hard_failures.append(message)
+        if fx_path.exists():
+            warnings.append(message + " (keeping previous archive)")
+        else:
+            warnings.append(message)
+            hard_failures.append(message)
 
     try:
         refresh_czech_regions(s, current)

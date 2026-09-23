@@ -76,9 +76,18 @@ def test_czech_region_names_and_lpg_absence() -> None:
     assert 'lpg' not in found['CZ051']
 
 
+def test_fred_csv_headers() -> None:
+    new = "observation_date,DCOILBRENTEU\n2026-09-18,97.5\n2026-09-19,.\n2026-09-22,98.55\n"
+    old = "DATE,DCOILBRENTEU\n2026-09-18,97.5\n2026-09-22,98.55\n"
+    assert u.parse_fred_csv(new, 'DCOILBRENTEU') == [
+        {'date': '2026-09-18', 'value': 97.5}, {'date': '2026-09-22', 'value': 98.55}]
+    assert len(u.parse_fred_csv(old, 'DCOILBRENTEU')) == 2
+
+
 if __name__ == '__main__':
     test_commission_blocks()
     test_jsonstat_time_axis()
     test_overseas_map_trim()
     test_czech_region_names_and_lpg_absence()
+    test_fred_csv_headers()
     print('offline parser checks: OK')
