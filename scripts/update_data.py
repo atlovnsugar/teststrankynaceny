@@ -6,12 +6,16 @@ import json
 import math
 import re
 import sys
+import time
 import unicodedata
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
+
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 import pandas as pd
 import requests
@@ -22,6 +26,7 @@ DATA = ROOT / "data"
 GEO = DATA / "geo"
 USER_AGENT = "eu-energy-price-tracker/2.0 (+https://github.com/)"
 TIMEOUT = 90
+RETRY_TOTAL = 4
 
 EU = [
     ("AT", "Austria"), ("BE", "Belgium"), ("BG", "Bulgaria"), ("HR", "Croatia"),
@@ -55,14 +60,36 @@ FUEL_HISTORY_MIRROR_URL = "https://huggingface.co/datasets/FionnHughes/eu-weekly
 def session() -> requests.Session:
     s = requests.Session()
     s.headers.update({"User-Agent": USER_AGENT, "Accept": "*/*"})
+    retry = Retry(
+        total=RETRY_TOTAL,
+        connect=RETRY_TOTAL,
+        read=RETRY_TOTAL,
+        status=RETRY_TOTAL,
+        backoff_factor=1.0,
+        status_forcelist=(429, 500, 502, 503, 504),
+        allowed_methods=frozenset({"GET"}),
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    s.mount("https://", adapter)
+    s.mount("http://", adapter)
     return s
 
 
 def get(s: requests.Session, url: str, **kwargs) -> requests.Response:
     kwargs.setdefault("timeout", TIMEOUT)
-    r = s.get(url, **kwargs)
-    r.raise_for_status()
-    return r
+    last_exc: Exception | None = None
+    for attempt in range(1, RETRY_TOTAL + 1):
+        try:
+            r = s.get(url, **kwargs)
+            r.raise_for_status()
+            return r
+        except Exception as exc:
+            last_exc = exc
+            if attempt == RETRY_TOTAL:
+                break
+            time.sleep(min(2 ** (attempt - 1), 8))
+    raise RuntimeError(f"GET failed after {RETRY_TOTAL} attempts: {url} :: {last_exc}")
 
 
 def load_json(path: Path, fallback: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -371,51 +398,57 @@ def parse_fuel_history_mirror(s: requests.Session) -> tuple[dict[str, Any], dict
 
 
 def parse_fuel_history(s: requests.Session) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]], str]:
-    # Prefer the Commission's own historical workbook. Its spreadsheet layout has
-    # changed over time, however, so a validated mirror of the same Commission
-    # series is retained as a deterministic fallback rather than leaving the site
-    # silently on bootstrap data.
+    """Build the full weekly fuel archive.
+
+    The European Commission Weekly Oil Bulletin is the authoritative source.
+    For stable automated ingestion we use a cleaned, machine-readable mirror of
+    the same Commission series, updated weekly and published with provenance.
+    The Commission page remains the authoritative source URL and is optionally
+    checked against the latest Czech values when the workbook is reachable.
+    """
+    meta, records, href = parse_fuel_history_mirror(s)
+    meta["transport_note"] = (
+        "Machine-readable archive from a cleaned mirror of the European Commission "
+        "Weekly Oil Bulletin; Commission source page retained as authoritative reference."
+    )
+
     try:
-        href, content = find_ec_history_xlsx(s)
+        official_href, content = find_ec_history_xlsx(s)
         xl = pd.ExcelFile(io.BytesIO(content))
-        sheet_candidates = [name for name in xl.sheet_names if norm_key(name) in {"priceswithtaxes", "priceswithtax", "priceswithtaxesctr"}]
+        sheet_candidates = [
+            name for name in xl.sheet_names
+            if norm_key(name) in {"priceswithtaxes", "priceswithtax", "priceswithtaxesctr"}
+        ]
         if not sheet_candidates:
             sheet_candidates = [name for name in xl.sheet_names if "prices with taxes" in name.lower()]
-        if not sheet_candidates:
-            raise RuntimeError(f"no suitable prices-with-taxes sheet; sheets={xl.sheet_names}")
-        raw = pd.read_excel(xl, sheet_name=sheet_candidates[0], header=None)
-        records = parse_fuel_sheet(raw)
-        ok, reason = _validate_fuel_history_records(records)
-        if not ok:
-            raise RuntimeError(f"Commission workbook parsed only partially: {reason}")
-        latest_by_country = {code: series[-1] for code, series in records.items() if series}
-        as_of = max(r["date"] for r in latest_by_country.values())
-        oldest = min(series[0]["date"] for series in records.values() if series)
-        countries = []
-        for code, name in EU:
-            row = latest_by_country.get(code, {})
-            item = {"code": code, "name": name}
-            for key in ("petrol95", "diesel", "lpg"):
-                if key in row:
-                    item[key] = row[key]
-            countries.append(item)
-        meta = {
-            "as_of": as_of,
-            "history_from": oldest,
-            "currency": "EUR",
-            "unit": "EUR/L",
-            "observation_cadence": "weekly",
-            "observation_count": sum(len(series) for series in records.values()),
-            "source": "European Commission Weekly Oil Bulletin — Price developments 2005 onwards",
-            "source_url": EC_WEEKLY_URL,
-            "history_source_url": href,
-            "countries": countries,
-        }
-        return meta, records, href
-    except Exception as primary_exc:
-        meta, records, href = parse_fuel_history_mirror(s)
-        meta["fallback_reason"] = str(primary_exc)
-        return meta, records, href
+        if sheet_candidates:
+            raw = pd.read_excel(xl, sheet_name=sheet_candidates[0], header=None)
+            official_records = parse_fuel_sheet(raw)
+            ok, reason = _validate_fuel_history_records(official_records)
+            if ok:
+                meta["official_workbook_verified"] = True
+                meta["official_workbook_url"] = official_href
+                mirror_cz = records.get("CZ", [])
+                official_cz = official_records.get("CZ", [])
+                if mirror_cz and official_cz:
+                    m, o = mirror_cz[-1], official_cz[-1]
+                    mismatches = {}
+                    for key in ("petrol95", "diesel", "lpg"):
+                        if key in m and key in o and abs(float(m[key]) - float(o[key])) > 0.02:
+                            mismatches[key] = {"mirror": m[key], "official": o[key]}
+                    meta["official_workbook_check"] = (
+                        {"status": "difference_detected", "values": mismatches}
+                        if mismatches else
+                        {"status": "latest_czech_values_within_tolerance"}
+                    )
+            else:
+                meta["official_workbook_verified"] = False
+                meta["official_workbook_check"] = {"status": "verification_failed", "reason": reason}
+    except Exception as exc:
+        meta["official_workbook_verified"] = False
+        meta["official_workbook_check"] = {"status": "verification_unavailable", "reason": str(exc)}
+
+    return meta, records, href
 
 def flatten_jsonstat(data: dict[str, Any]) -> list[dict[str, Any]]:
     dims = data["id"]
@@ -753,6 +786,7 @@ def main() -> int:
     s = session()
     successes: list[str] = []
     warnings: list[str] = []
+    hard_failures: list[str] = []
 
     try:
         fuel_meta, fuel_records, source_xlsx = parse_fuel_history(s)
@@ -760,7 +794,9 @@ def main() -> int:
         write_json(fuel_history_path, {"generated_at": now, **fuel_meta, "history": fuel_records})
         successes.append(f"fuel: {fuel_meta['as_of']} / from {fuel_meta['history_from']} ({len(fuel_records)} countries)")
     except Exception as exc:
-        warnings.append(f"fuel refresh failed; retaining previous data: {exc}")
+        message = f"fuel refresh failed: {exc}"
+        warnings.append(message)
+        hard_failures.append(message)
 
     try:
         gas_meta, gas_all = parse_gas(s)
@@ -768,7 +804,9 @@ def main() -> int:
         write_json(gas_path, {"generated_at": now, **gas_all})
         successes.append(f"gas: {gas_meta['as_of']} / from {gas_meta['history_from']} ({len(gas_all['history'])} series)")
     except Exception as exc:
-        warnings.append(f"gas refresh failed; retaining previous data: {exc}")
+        message = f"gas refresh failed: {exc}"
+        warnings.append(message)
+        hard_failures.append(message)
 
     try:
         oil = parse_fred_brent(s)
@@ -776,7 +814,9 @@ def main() -> int:
         write_json(oil_path, {"generated_at": now, **oil})
         successes.append(f"Brent: {oil['as_of']} / from {oil['history_from']}")
     except Exception as exc:
-        warnings.append(f"Brent refresh failed; retaining previous data: {exc}")
+        message = f"Brent refresh failed: {exc}"
+        warnings.append(message)
+        hard_failures.append(message)
 
     try:
         fx = parse_fx(s)
@@ -784,7 +824,9 @@ def main() -> int:
         write_json(fx_path, {"generated_at": now, **fx})
         successes.append(f"FX: {fx['as_of']} / from {fx['history_from']}")
     except Exception as exc:
-        warnings.append(f"FX refresh failed; retaining previous exchange-rate data: {exc}")
+        message = f"FX refresh failed: {exc}"
+        warnings.append(message)
+        hard_failures.append(message)
 
     try:
         refresh_czech_regions(s, current)
@@ -806,6 +848,13 @@ def main() -> int:
         current["refresh_warnings"] = warnings
     else:
         current.pop("refresh_warnings", None)
+    report = {
+        "generated_at": now,
+        "successes": successes,
+        "warnings": warnings,
+        "hard_failures": hard_failures,
+    }
+    write_json(DATA / "refresh-report.json", report)
     write_json(current_path, current)
 
     print("EU Energy Price Tracker data refresh")
@@ -813,6 +862,11 @@ def main() -> int:
         print(f"  OK   {item}")
     for item in warnings:
         print(f"  WARN {item}")
+    if hard_failures:
+        print("  ERROR required archive refreshes failed; no data commit should occur.")
+        for item in hard_failures:
+            print(f"    - {item}")
+        return 1
     return 0
 
 

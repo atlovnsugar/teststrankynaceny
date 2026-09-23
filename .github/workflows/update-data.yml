@@ -8,6 +8,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/update_data.py'
+      - 'scripts/validate_data.py'
       - 'requirements.txt'
       - '.github/workflows/update-data.yml'
 
@@ -20,7 +21,7 @@ concurrency:
 
 jobs:
   refresh:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
@@ -39,6 +40,15 @@ jobs:
 
       - name: Rebuild full public archives
         run: python scripts/update_data.py
+
+      - name: Show refresh diagnostics
+        if: always()
+        run: |
+          if [ -f data/refresh-report.json ]; then
+            cat data/refresh-report.json
+          else
+            echo 'No refresh-report.json was produced.'
+          fi
 
       - name: Validate refreshed archives
         run: python scripts/validate_data.py

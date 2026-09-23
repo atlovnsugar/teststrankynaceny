@@ -233,3 +233,26 @@ Countries are clickable in the EU map, fuel tables and natural-gas table. Czech 
 
 The current public regional feed exposes an LPG field but currently publishes zero placeholders for the regions. The ETL treats those zeros as **not reported** rather than as real prices, so the application intentionally shows `NR` on the Czech regional LPG map/table/dashboard until a genuine regional observation becomes available.
 
+
+## v4 refresh pipeline fix
+
+The v4 package fixes a failure mode discovered after the first real GitHub Actions refresh.
+The refresh job now pins the runner to `ubuntu-24.04`, retries transient HTTP failures, uses the
+machine-readable Weekly Oil Bulletin mirror as the primary historical transport, and performs a
+best-effort verification against the European Commission workbook. Required archive failures now
+stop the refresh immediately with their real source URL/error instead of silently retaining seed data.
+
+The workflow also prints `data/refresh-report.json` even when the refresh fails. That report is ignored
+by Git so a diagnostics timestamp does not create needless repository commits.
+
+### What to do after installing v4
+
+1. Replace the repository contents with v4 and push to `main`.
+2. Open **Actions → Refresh energy data (full archive) → Run workflow**.
+3. Open the `Rebuild full public archives` step. It should print four `OK` lines for fuel, gas, Brent and FX.
+4. The next step, **Show refresh diagnostics**, prints the exact refresh report.
+5. **Validate refreshed archives** must end with `DATA VALIDATION OK`.
+6. The final step commits the generated datasets. That commit automatically starts GitHub Pages deployment.
+
+The `ubuntu-latest` migration message is only a GitHub notice; v4 pins the job to Ubuntu 24.04 so the
+repository is unaffected by the announced October–November 2026 `ubuntu-latest` migration.
