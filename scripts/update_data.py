@@ -341,20 +341,44 @@ def _validate_fuel_history_records(records: dict[str, list[dict[str, Any]]]) -> 
 
 def parse_fuel_history_mirror(s: requests.Session) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]], str]:
     r = get(s, FUEL_HISTORY_MIRROR_URL)
-    reader = csv.DictReader(io.StringIO(r.text))
-    fuel_map = {
-        "petrol_95": "petrol95",
-        "diesel": "diesel",
-        "lpg": "lpg",
-    }
+    reader = csv.DictReader(io.StringIO(r.text.lstrip("\ufeff")))
+    fields = {norm_key(f): f for f in (reader.fieldnames or [])}
+    def pick(*names: str, contains: str | None = None) -> str | None:
+        for n in names:
+            if n in fields:
+                return fields[n]
+        if contains:
+            for k, f in fields.items():
+                if contains in k:
+                    return f
+        return None
+    c_country = pick("country", "countrycode", "geo", "ctr", "code")
+    c_fuel = pick("fueltype", "fuel", "product", "productname")
+    c_date = pick("date", "week", "observationdate", "pricedate")
+    c_price = pick("priceeurperlitre", "priceperlitre", "eurperlitre", contains="price")
+    if not all((c_country, c_fuel, c_date, c_price)):
+        raise RuntimeError(f"unexpected mirror CSV header: {reader.fieldnames}")
+
+    def fuel_of(label: Any) -> str | None:
+        k = norm_key(label)
+        if "lpg" in k or "autogas" in k:
+            return "lpg"
+        if "diesel" in k or "gasoil" in k or "gazole" in k:
+            return "diesel"
+        if ("95" in k or k in {"petrol", "gasoline", "eurosuper"}) and not any(x in k for x in ("98", "100", "heating")):
+            return "petrol95"
+        return None
+
     records: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in reader:
-        code = str(row.get("country", "")).strip().upper()
-        fuel = fuel_map.get(str(row.get("fuel_type", "")).strip().lower())
-        date = parse_date(row.get("date"))
-        value = parse_eu_number(row.get("price_eur_per_litre"))
+        code = str(row.get(c_country, "")).strip().upper()
+        fuel = fuel_of(row.get(c_fuel))
+        date = parse_date(row.get(c_date))
+        value = parse_eu_number(row.get(c_price))
         if code not in EU_CODES or not fuel or not date or value is None:
             continue
+        if value > 20:  # per-1000-L layout
+            value /= 1000
         if not (0.1 <= value <= 5):
             continue
         records[code].append({"date": date, fuel: round(value, 4)})
@@ -397,6 +421,29 @@ def parse_fuel_history_mirror(s: requests.Session) -> tuple[dict[str, Any], dict
     return meta, merged, FUEL_HISTORY_MIRROR_URL
 
 
+def parse_fuel_history_official(s: requests.Session) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]], str]:
+    href, content = find_ec_history_xlsx(s)
+    xl = pd.ExcelFile(io.BytesIO(content))
+    names = [n for n in xl.sheet_names if "prices with taxes" in n.lower() or norm_key(n) in {"priceswithtaxes", "priceswithtax"}]
+    if not names:
+        raise RuntimeError(f"no 'Prices with taxes' sheet in workbook; sheets: {xl.sheet_names}")
+    records = parse_fuel_sheet(pd.read_excel(xl, sheet_name=names[0], header=None))
+    ok, reason = _validate_fuel_history_records(records)
+    if not ok:
+        raise RuntimeError(f"official workbook validation failed: {reason}")
+    latest = {c: sr[-1] for c, sr in records.items() if sr}
+    meta = {
+        "as_of": max(r["date"] for r in latest.values()),
+        "history_from": min(sr[0]["date"] for sr in records.values() if sr),
+        "currency": "EUR", "unit": "EUR/L", "observation_cadence": "weekly",
+        "observation_count": sum(len(sr) for sr in records.values()),
+        "source": "European Commission Weekly Oil Bulletin, Price developments 2005 onwards",
+        "source_url": EC_WEEKLY_URL, "official_workbook_verified": True, "official_workbook_url": href,
+        "countries": [{"code": c, "name": n, **{k: latest[c][k] for k in ("petrol95", "diesel", "lpg") if c in latest and k in latest[c]}} for c, n in EU],
+    }
+    return meta, records, href
+
+
 def parse_fuel_history(s: requests.Session) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]], str]:
     """Build the full weekly fuel archive.
 
@@ -406,7 +453,16 @@ def parse_fuel_history(s: requests.Session) -> tuple[dict[str, Any], dict[str, l
     The Commission page remains the authoritative source URL and is optionally
     checked against the latest Czech values when the workbook is reachable.
     """
-    meta, records, href = parse_fuel_history_mirror(s)
+    try:
+        meta, records, href = parse_fuel_history_mirror(s)
+    except Exception as mirror_exc:
+        print(f"::warning title=Fuel mirror failed::{mirror_exc}")
+        try:
+            meta, records, href = parse_fuel_history_official(s)
+        except Exception as official_exc:
+            raise RuntimeError(f"mirror: {mirror_exc} | official workbook: {official_exc}") from official_exc
+        meta["mirror_error"] = str(mirror_exc)
+        return meta, records, href
     meta["transport_note"] = (
         "Machine-readable archive from a cleaned mirror of the European Commission "
         "Weekly Oil Bulletin; Commission source page retained as authoritative reference."
@@ -890,10 +946,12 @@ def main() -> int:
         print(f"  OK   {item}")
     for item in warnings:
         print(f"  WARN {item}")
+        print(f"::warning title=Data refresh warning::{item[:400]}")
     if hard_failures:
         print("  ERROR required archive refreshes failed; no data commit should occur.")
         for item in hard_failures:
             print(f"    - {item}")
+            print(f"::error title=Data refresh failed::{item[:400]}")
         return 1
     return 0
 

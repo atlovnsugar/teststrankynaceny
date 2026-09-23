@@ -10,10 +10,13 @@ CZ_CODES = {"CZ010","CZ020","CZ031","CZ032","CZ041","CZ042","CZ051","CZ052","CZ0
 
 
 def load(name: str):
+    if not (DATA / name).exists():
+        fail(f"missing file data/{name} (run the refresh workflow first and commit its output)")
     return json.loads((DATA / name).read_text(encoding="utf-8"))
 
 
 def fail(message: str) -> None:
+    print(f"::error title=Data validation failed::{message}")
     raise SystemExit(f"DATA VALIDATION FAILED: {message}")
 
 
