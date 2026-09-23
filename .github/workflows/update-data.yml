@@ -10,7 +10,7 @@ on:
       - 'scripts/update_data.py'
       - 'scripts/validate_data.py'
       - 'requirements.txt'
-      - 'data/supply.json'
+      - 'scripts/refresh_supply.py'
       - '.github/workflows/update-data.yml'
 
 permissions:
@@ -42,7 +42,6 @@ jobs:
 
       - name: Rebuild full public archives
         run: python scripts/update_data.py
-
       - name: Show refresh diagnostics
         if: always()
         run: |

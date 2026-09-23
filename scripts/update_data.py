@@ -925,66 +925,94 @@ def compact_origin_history(raw: dict[str, dict[str, list[dict[str, Any]]]], unit
     return out
 
 
+def _chunks(items: list[str], size: int = 3):
+    for i in range(0, len(items), size):
+        yield items[i:i + size]
+
+
+def eurostat_rows_batched(s: requests.Session, url: str, common_params: list[tuple[str, str]], geo_codes: list[str], *, chunk_size: int = 3) -> list[dict[str, Any]]:
+    """Fetch Eurostat rows in small geo batches to avoid HTTP 413 URL-length failures."""
+    rows: list[dict[str, Any]] = []
+    for chunk in _chunks(geo_codes, chunk_size):
+        raw = eurostat_json(s, url, list(common_params) + [("geo", code) for code in chunk])
+        if "time" not in raw.get("id", []):
+            raise RuntimeError(f"Eurostat response has no time dimension for geos {','.join(chunk)}")
+        rows.extend(flatten_jsonstat(raw))
+    return rows
+
+
+def rows_to_nested(rows: list[dict[str, Any]], unit: str) -> dict[str, dict[str, list[dict[str, Any]]]]:
+    nested = defaultdict(lambda: defaultdict(list))
+    for row in rows:
+        geo = str(row.get("geo", ""))
+        partner = str(row.get("partner", ""))
+        period = str(row.get("time", ""))
+        value = row.get("value")
+        if geo not in EU_CODES or not period or value is None:
+            continue
+        try:
+            value = float(value)
+        except Exception:
+            continue
+        if value < 0:
+            continue
+        nested[geo][partner].append({"period": period, "value": value, "unit": unit})
+    return nested
+
+
 def parse_supply_oil(s: requests.Session) -> dict[str, Any]:
-    products = {"petrol95":"O4652", "diesel":"O4671", "lpg":"O4630"}
-    common=[("freq","M"),("unit","THS_T"),("sinceTimePeriod",SUPPLY_SINCE)]
-    geo_params=[("geo",code) for code,_ in EU]
-    product_out={}
-    for product,siec in products.items():
-        params=common+[("siec",siec)]+geo_params
-        raw=eurostat_json(s, EUROSTAT_OIL_IMPORTS_URL, params)
-        # Require an actual time dimension before treating a response as valid.
-        if "time" not in raw.get("id",[]):
-            raise RuntimeError(f"Eurostat oil imports {siec} response has no time dimension")
-        rows=flatten_jsonstat(raw)
-        nested=defaultdict(lambda: defaultdict(list))
-        for row in rows:
-            geo=str(row.get("geo","")); partner=str(row.get("partner","")); period=str(row.get("time","")); value=row.get("value")
-            if geo not in EU_CODES or not period or value is None: continue
-            try: val=float(value)
-            except Exception: continue
-            if val<0: continue
-            nested[geo][partner].append({"period":period,"value":val})
-        product_out[product]=compact_origin_history(nested,"THS_T")
+    products = {"petrol95": "O4652", "diesel": "O4671", "lpg": "O4630"}
+    geos = [code for code, _ in EU]
+    product_out = {}
+    for product, siec in products.items():
+        rows = eurostat_rows_batched(
+            s, EUROSTAT_OIL_IMPORTS_URL,
+            [("freq", "M"), ("unit", "THS_T"), ("sinceTimePeriod", SUPPLY_SINCE), ("siec", siec)],
+            geos, chunk_size=3,
+        )
+        product_out[product] = compact_origin_history(rows_to_nested(rows, "THS_T"), "THS_T")
     return product_out
 
 
 def parse_supply_gas(s: requests.Session) -> tuple[dict[str, Any], dict[str, Any]]:
-    out={}
-    for key,siec in (("gas_pipeline","G3000"),("gas_lng","G3200")):
-        params=[("freq","M"),("unit","TJ_GCV"),("siec",siec),("sinceTimePeriod",SUPPLY_SINCE)]+[("geo",code) for code,_ in EU]
-        raw=eurostat_json(s, EUROSTAT_GAS_IMPORTS_URL, params)
-        if "time" not in raw.get("id",[]):
-            raise RuntimeError(f"Eurostat gas imports {siec} response has no time dimension")
-        nested=defaultdict(lambda: defaultdict(list))
-        for row in flatten_jsonstat(raw):
-            geo=str(row.get("geo","")); partner=str(row.get("partner","")); period=str(row.get("time","")); value=row.get("value")
-            if geo not in EU_CODES or not period or value is None: continue
-            try: val=float(value)
-            except Exception: continue
-            if val<0: continue
-            nested[geo][partner].append({"period":period,"value":val})
-        out[key]=compact_origin_history(nested,"TJ_GCV")
+    geos = [code for code, _ in EU]
+    out = {}
+    for key, siec in (("gas_pipeline", "G3000"), ("gas_lng", "G3200")):
+        rows = eurostat_rows_batched(
+            s, EUROSTAT_GAS_IMPORTS_URL,
+            [("freq", "M"), ("unit", "TJ_GCV"), ("siec", siec), ("sinceTimePeriod", SUPPLY_SINCE)],
+            geos, chunk_size=3,
+        )
+        out[key] = compact_origin_history(rows_to_nested(rows, "TJ_GCV"), "TJ_GCV")
     return out["gas_pipeline"], out["gas_lng"]
 
 
 def parse_refinery_output(s: requests.Session) -> dict[str, Any]:
-    indicator_map={"petrol95":"IS-ROMS-T","diesel":"IS-ROGD-T"}
-    params_base=[("freq","M"),("unit","THS_T"),("sinceTimePeriod",SUPPLY_SINCE)]+[("geo",code) for code,_ in EU]
-    out={code:{} for code,_ in EU}
-    for product,indic in indicator_map.items():
-        raw=eurostat_json(s, EUROSTAT_REFINERY_URL, params_base+[("indic_nrg",indic)])
-        if "time" not in raw.get("id",[]):
-            raise RuntimeError(f"Eurostat refinery {indic} response has no time dimension")
-        rows=flatten_jsonstat(raw)
+    indicator_map = {"petrol95": "IS-ROMS-T", "diesel": "IS-ROGD-T"}
+    geos = [code for code, _ in EU]
+    out = {code: {} for code, _ in EU}
+    for product, indicator in indicator_map.items():
+        rows = eurostat_rows_batched(
+            s, EUROSTAT_REFINERY_URL,
+            [("freq", "M"), ("unit", "THS_T"), ("sinceTimePeriod", SUPPLY_SINCE), ("indic_nrg", indicator)],
+            geos, chunk_size=3,
+        )
         for row in rows:
-            geo=str(row.get("geo",""));period=str(row.get("time",""));value=row.get("value")
-            if geo not in EU_CODES or not period or value is None: continue
-            try: val=float(value)
-            except Exception: continue
-            out.setdefault(geo,{}).setdefault(product,[]).append({"period":period,"value":round(val,3)})
+            geo = str(row.get("geo", ""))
+            period = str(row.get("time", ""))
+            value = row.get("value")
+            if geo not in EU_CODES or not period or value is None:
+                continue
+            try:
+                value = float(value)
+            except Exception:
+                continue
+            if value < 0:
+                continue
+            out.setdefault(geo, {}).setdefault(product, []).append({"period": period, "value": round(value, 3)})
     for geo in out:
-        for product in list(out[geo]): out[geo][product]=sorted(out[geo][product],key=lambda x:x["period"])
+        for product in list(out[geo]):
+            out[geo][product] = sorted(out[geo][product], key=lambda x: x["period"])
     return out
 
 
