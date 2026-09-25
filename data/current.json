@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-23T22:44:22Z",
+  "generated_at": "2026-09-25T11:54:03Z",
   "notes": "Each refresh rebuilds the full published historical archive for the primary sources; the first post-deployment refresh is a deliberate historical backfill, not just a current-value update.",
   "fuel": {
     "as_of": "2026-09-21",
@@ -203,7 +203,7 @@
     }
   },
   "czech_regions": {
-    "as_of": "2026-09-23",
+    "as_of": "2026-09-25",
     "history_from": "2026-09-09",
     "source": "cenaPHM.cz regional public feed (secondary Czech fuel-price source; cites Czech Statistical Office data)",
     "source_url": "https://cenaphm.cz/data.json",
@@ -300,6 +300,95 @@
       },
       {
         "as_of": "2026-09-23",
+        "regions": [
+          {
+            "code": "CZ010",
+            "name": "Praha",
+            "petrol95": 46.14,
+            "diesel": 50.54
+          },
+          {
+            "code": "CZ020",
+            "name": "Středočeský kraj",
+            "petrol95": 45.56,
+            "diesel": 49.92
+          },
+          {
+            "code": "CZ031",
+            "name": "Jihočeský kraj",
+            "petrol95": 45.05,
+            "diesel": 49.39
+          },
+          {
+            "code": "CZ032",
+            "name": "Plzeňský kraj",
+            "petrol95": 45.24,
+            "diesel": 49.48
+          },
+          {
+            "code": "CZ041",
+            "name": "Karlovarský kraj",
+            "petrol95": 45.49,
+            "diesel": 49.91
+          },
+          {
+            "code": "CZ042",
+            "name": "Ústecký kraj",
+            "petrol95": 45.34,
+            "diesel": 49.55
+          },
+          {
+            "code": "CZ051",
+            "name": "Liberecký kraj",
+            "petrol95": 45.27,
+            "diesel": 49.68
+          },
+          {
+            "code": "CZ052",
+            "name": "Královéhradecký kraj",
+            "petrol95": 45.32,
+            "diesel": 49.6
+          },
+          {
+            "code": "CZ053",
+            "name": "Pardubický kraj",
+            "petrol95": 45.33,
+            "diesel": 49.59
+          },
+          {
+            "code": "CZ063",
+            "name": "Vysočina",
+            "petrol95": 45.42,
+            "diesel": 49.69
+          },
+          {
+            "code": "CZ064",
+            "name": "Jihomoravský kraj",
+            "petrol95": 45.48,
+            "diesel": 49.66
+          },
+          {
+            "code": "CZ071",
+            "name": "Olomoucký kraj",
+            "petrol95": 45.41,
+            "diesel": 49.71
+          },
+          {
+            "code": "CZ072",
+            "name": "Zlínský kraj",
+            "petrol95": 45.31,
+            "diesel": 49.5
+          },
+          {
+            "code": "CZ080",
+            "name": "Moravskoslezský kraj",
+            "petrol95": 45.33,
+            "diesel": 49.58
+          }
+        ]
+      },
+      {
+        "as_of": "2026-09-25",
         "regions": [
           {
             "code": "CZ010",
@@ -530,7 +619,7 @@
     "latest": 114.89
   },
   "fx": {
-    "as_of": "2026-09-23",
+    "as_of": "2026-09-24",
     "history_from": "2005-01-03",
     "source": "ECB reference exchange rates",
     "source_url": "https://data.ecb.europa.eu/data/datasets/EXR"
