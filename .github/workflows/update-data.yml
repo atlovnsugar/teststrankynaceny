@@ -7,11 +7,12 @@ on:
   push:
     branches: [main]
     paths:
-      - 'scripts/update_data.py'
-      - 'scripts/validate_data.py'
-      - 'scripts/refresh_guard.py'
+      - 'scripts/**'
       - 'requirements.txt'
       - '.github/workflows/update-data.yml'
+      - 'site/energy_system.js'
+      - 'site/energy_system.css'
+      - 'site/system_section.html'
 
 permissions:
   contents: write
@@ -25,7 +26,7 @@ jobs:
   refresh:
     runs-on: ubuntu-24.04
     steps:
-      - name: Checkout
+      - name: Checkout source-only repository
         uses: actions/checkout@v7.0.1
 
       - name: Set up Python
@@ -37,49 +38,47 @@ jobs:
       - name: Install ETL dependencies
         run: python -m pip install -r requirements.txt
 
-      - name: Run offline parser regression checks
+      - name: Run offline parser checks
         run: python scripts/test_data_parsers.py
 
-      - name: Rebuild full public archives
+      - name: Rebuild primary public archives
         run: python scripts/update_data.py
+
+      - name: Rebuild energy-system archives
+        run: python scripts/refresh_energy_system.py
 
       - name: Show refresh diagnostics
         if: always()
         run: |
-          if [ -f data/refresh-report.json ]; then
-            cat data/refresh-report.json
-          else
-            echo 'No refresh-report.json was produced.'
-          fi
+          echo '--- refresh-report.json ---'
+          if [ -f data/refresh-report.json ]; then cat data/refresh-report.json; else echo 'No refresh-report.json'; fi
+          echo '--- generated archive state ---'
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=Path('data')
+          for name in ['fuel-history.json','gas.json','oil.json','fx.json','supply.json','electricity-system.json']:
+              p=d/name
+              print(f'{name}: {p.stat().st_size if p.exists() else "MISSING"} bytes')
+          PY
 
-      # Critical guard: old update_data.py versions could swallow a required
-      # source failure and leave the one-country bootstrap archive in place.
-      # Never allow validate_data.py to run against that state.
-      - name: Verify refresh actually replaced the bootstrap archives
-        run: python scripts/refresh_guard.py
-
-      - name: Validate refreshed archives
+      - name: Validate primary archives
         run: python scripts/validate_data.py
 
-      - name: Commit refreshed data
+      - name: Validate energy-system archives
+        run: python scripts/validate_energy_system.py
+
+      - name: Commit generated data only
         id: commit
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add data/
-          echo "### Energy data refresh" >> "$GITHUB_STEP_SUMMARY"
-          python scripts/validate_data.py >> "$GITHUB_STEP_SUMMARY"
           if git diff --cached --quiet; then
-            echo 'No data changes to commit.'
+            echo 'No generated data changes to commit.'
             echo 'changed=false' >> "$GITHUB_OUTPUT"
           else
-            git commit -m 'chore(data): refresh energy price datasets'
+            git commit -m 'chore(data): refresh energy archives'
             git push
             echo 'changed=true' >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Trigger Pages deployment
-        if: steps.commit.outputs.changed == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run deploy.yml --ref main

@@ -1,9 +1,10 @@
 name: Deploy to GitHub Pages
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Refresh energy data (full archive)"]
+    types: [completed]
 
 permissions:
   contents: read
@@ -16,17 +17,22 @@ concurrency:
 
 jobs:
   deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout
+      - name: Checkout generated data commit
         uses: actions/checkout@v7.0.1
+        with:
+          ref: main
+          fetch-depth: 1
 
-      - name: Check JavaScript
+      - name: Check source and generated archives
         run: |
           node --version
+          python --version
           node --check site/app.js
           node --check scripts/build.mjs
           test -f data/current.json
@@ -35,14 +41,20 @@ jobs:
           test -f data/oil.json
           test -f data/fx.json
           test -f data/supply.json
+          test -f data/electricity-system.json
+          test -f data/infrastructure/gas-pipelines.geojson
+          test -f data/infrastructure/oil-pipelines.geojson
 
-      - name: Refuse to deploy bootstrap or partial archives
+      - name: Validate primary archives
         run: python scripts/validate_data.py
+
+      - name: Validate energy system archives
+        run: python scripts/validate_energy_system.py
 
       - name: Build static site
         run: node scripts/build.mjs
 
-      - name: Setup Pages
+      - name: Configure Pages
         uses: actions/configure-pages@v6.0.0
 
       - name: Upload Pages artifact

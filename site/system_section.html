@@ -1,0 +1,68 @@
+    <section class="view" id="view-system">
+      <div class="system-hero">
+        <div>
+          <div class="eyebrow">ENERGY SYSTEM // ORIGINS · FLOWS · POWER · PRICES</div>
+          <h1 class="system-title">Europe’s energy system — mapped from observed data, not guessed routes.</h1>
+          <p class="system-copy">A single control room for electricity generation, renewable/fossil balance, household energy prices, oil and gas origins, real gas transmission observations, and current pipeline geometry. Infrastructure routes and measured flows remain separate layers.</p>
+        </div>
+        <div class="system-board">
+          <div class="eyebrow">SYSTEM ARCHIVE</div>
+          <div id="flowSystemStatus" class="status-badge" style="margin-top:10px;display:inline-flex">LOADING</div>
+          <p class="small" style="margin-top:12px;color:var(--muted)">Eurostat supplies the statistical history. ENTSOG supplies gas transmission observations. Global Energy Monitor supplies current route geometry for gas and oil pipelines.</p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div><span class="eyebrow">01 / ELECTRICITY SYSTEM</span><h2>What powers each country?</h2></div>
+          <div class="system-controls">
+            <label>Country<select id="systemCountry"></select></label>
+            <label>Year<select id="systemYear"></select></label>
+            <div id="systemLayer" class="system-layer"><button data-layer="renewable" class="active">Renewables</button><button data-layer="fossil">Fossil</button><button data-layer="nuclear">Nuclear</button></div>
+          </div>
+        </div>
+        <div class="system-grid">
+          <div>
+            <div id="systemMixMap" class="system-map"></div>
+            <div class="flow-legend"><span><i class="flow-dot" style="background:#70d69a"></i>Renewables</span><span><i class="flow-dot" style="background:#ff3d55"></i>Fossil</span><span><i class="flow-dot" style="background:#9a8cff"></i>Nuclear</span><span id="systemMapNote">CLICK A COUNTRY</span></div>
+          </div>
+          <div id="systemCountryDesk" class="system-panel">
+            <div class="panel-header"><div><span class="eyebrow">COUNTRY ENERGY DESK</span><h2 id="systemDeskTitle">Czechia</h2><div id="systemDeskMeta" class="small"></div></div></div>
+            <div id="systemDeskCards" class="system-cards"></div>
+            <div class="panel" style="padding:12px;margin-top:12px"><div class="eyebrow">GENERATION SOURCES</div><div id="systemDeskSources" style="margin-top:7px"></div></div>
+            <div class="panel" style="padding:12px;margin-top:12px"><div class="eyebrow">LATEST ENERGY PRICES</div><div id="systemDeskPrices" style="margin-top:7px"></div></div>
+            <div class="panel" style="padding:12px;margin-top:12px"><div class="eyebrow">OIL IMPORT ORIGIN — LATEST</div><div id="systemDeskOrigins" style="margin-top:7px"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel"><div class="panel-header"><div><span class="eyebrow">GENERATION HISTORY</span><h2>How the electricity mix changed</h2></div><span class="panel-note">Eurostat · monthly net generation aggregated to annual totals</span></div><div id="systemMixChart" class="system-chart"></div></div>
+
+      <div class="panel">
+        <div class="panel-header"><div><span class="eyebrow">02 / ENERGY PRICE THEATER</span><h2>Country price map</h2></div><label>Indicator<select id="systemPrice"><option value="electricity">Electricity · households</option><option value="gas">Natural gas · households</option><option value="petrol95">Petrol 95</option><option value="diesel">Diesel</option><option value="lpg">LPG</option></select></label></div>
+        <div id="systemPriceMap" class="system-map"></div><div id="systemPriceMapNote" class="small" style="margin-top:8px;color:var(--muted)"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div><span class="eyebrow">03 / SUPPLY &amp; FLOWS</span><h2>Where energy enters Europe — and how it moves</h2></div>
+          <div class="system-controls">
+            <label>Flow layer<select id="flowType"><option value="gas">Gas · transmission</option><option value="oil">Oil · infrastructure / imports</option></select></label>
+            <label id="oilModeWrap" hidden>Oil view<select id="oilMode"><option value="infrastructure">Pipeline infrastructure</option><option value="trade">Import origins</option></select></label>
+            <label id="oilProductWrap" hidden>Product<select id="oilProduct"><option value="petrol95">Petrol 95</option><option value="diesel">Diesel</option><option value="lpg">LPG</option></select></label>
+            <label id="oilPeriodWrap" hidden>Month<select id="oilPeriod"></select></label>
+          </div>
+        </div>
+        <div id="flowRealityNote" class="flow-map-note"></div>
+        <div id="systemFlowMap" class="flow-map"></div>
+        <div id="flowMapMeta" class="small" style="margin-top:8px;color:var(--muted)"></div>
+      </div>
+
+      <div class="system-subgrid">
+        <section class="panel"><div class="panel-header"><div><span class="eyebrow">WHAT THE MAP MEASURES</span><h2>Observed flow vs. infrastructure</h2></div></div><div class="prose"><p><strong>Gas:</strong> ENTSOG physical-flow observations are attached to transmission points. The map shows actual interconnection points and the historical series returned by ENTSOG. Pipeline route geometry is a separate infrastructure layer.</p><p><strong>Oil:</strong> Eurostat can show import volumes by ultimate origin; it does not provide a complete EU-wide pipeline-throughput series for every oil pipeline. Therefore the application never turns an import trade volume into a fake pipeline volume.</p></div></section>
+        <section class="panel"><div class="panel-header"><div><span class="eyebrow">PIPELINE SOURCES</span><h2>Route data provenance</h2></div></div><div class="prose"><p>Current gas and oil route snapshots are refreshed from Global Energy Monitor’s public pipeline-map data. Their tracker geometry is used as infrastructure metadata; route lines are not treated as measured flow.</p><p>For gas, ENTSOG remains the source of observed transmission volumes. For historical oil flows, the application separates trade-origin volumes from pipeline infrastructure.</p></div></section>
+      </div>
+
+      <div id="systemTooltip" class="system-tooltip" hidden></div>
+      <div id="systemFlowHistory" class="system-modal" hidden><div class="system-modal-card"><div class="panel-header"><div><span class="eyebrow">TRANSMISSION POINT HISTORY</span><h2 id="flowHistoryTitle">ENTSOG point</h2><div id="flowHistoryMeta" class="small"></div></div><button id="systemFlowHistoryClose">Close</button></div><div id="flowHistoryChart" class="system-chart" style="margin-top:12px"></div></div></div>
+    </section>

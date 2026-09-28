@@ -241,7 +241,42 @@
 
   let eventsBound=false;
   function bindOnce(){ if(!eventsBound){events();eventsBound=true;} }
-  async function start(){ if(!$('#view-system'))return; bindOnce(); if(state.system){renderAll();return;} try{await load();}catch(e){console.error(e);const b=$('#flowSystemStatus');if(b){b.textContent='SYSTEM DATA FAILED';b.classList.remove('ok');}} }
+  let shellReady=false;
+  async function ensureShell(){
+    if($('#view-system')){shellReady=true;return true;}
+    const tabs=document.querySelector('.tabs');
+    const sourcesTab=document.querySelector('.tab[data-view="sources"]');
+    const main=document.querySelector('main.shell');
+    const sources=document.querySelector('#view-sources');
+    if(!tabs||!main)return false;
+    // Remove the old schematic Supply & flows UI so there is only one authoritative system view.
+    document.querySelector('.tab[data-view="supply"]')?.remove();
+    document.querySelector('#view-supply')?.remove();
+    const tab=document.createElement('button');
+    tab.className='tab';tab.dataset.view='system';tab.textContent='Energy system';
+    sourcesTab ? tabs.insertBefore(tab,sourcesTab) : tabs.appendChild(tab);
+    const empty=document.createElement('section');
+    empty.className='view';empty.id='view-system';
+    sources ? main.insertBefore(empty,sources) : main.appendChild(empty);
+    try{
+      const r=await fetch('./system_section.html'+builtVersion(),{cache:'no-store'});
+      if(!r.ok)throw new Error(`system_section.html: HTTP ${r.status}`);
+      empty.outerHTML=await r.text();
+      const created=$('#view-system');
+      tab.addEventListener('click',()=>{
+        document.querySelectorAll('.tabs .tab').forEach(x=>x.classList.toggle('active',x===tab));
+        document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x===created));
+        window.scrollTo({top:0,behavior:'smooth'});
+        setTimeout(()=>start(),0);
+      });
+      shellReady=true; return true;
+    }catch(e){
+      empty.innerHTML=`<section class="panel"><div class="eyebrow">ENERGY SYSTEM</div><h2>System module unavailable</h2><p class="small">${esc(e.message)}</p></section>`;
+      tab.addEventListener('click',()=>{document.querySelectorAll('.tabs .tab').forEach(x=>x.classList.toggle('active',x===tab));document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id==='view-system'));});
+      shellReady=true; return false;
+    }
+  }
+  async function start(){ if(!shellReady) await ensureShell(); if(!$('#view-system'))return; bindOnce(); if(state.system){renderAll();return;} try{await load();}catch(e){console.error(e);const b=$('#flowSystemStatus');if(b){b.textContent='SYSTEM DATA FAILED';b.classList.remove('ok');}} }
   window.renderEnergySystem=()=>start();
-  window.addEventListener('DOMContentLoaded',()=>{if($('#view-system'))bindOnce();});
+  window.addEventListener('DOMContentLoaded',()=>{start().catch(console.error);});
 })();
