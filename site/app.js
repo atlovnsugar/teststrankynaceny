@@ -358,7 +358,7 @@ function renderActive(){
   if(active==='czechia')renderCzTable();
   if(active==='gas')renderGas();
   if(active==='brent')renderBrent();
-  if(active==='supply')renderSupply();
+  if(active==='system' && window.renderEnergySystem)window.renderEnergySystem();
   if(active==='sources')renderSources();
 }
 function setCurrency(currency){state.currency=currency;qs('#currencyEur').classList.toggle('active',currency==='EUR');qs('#currencyCzk').classList.toggle('active',currency==='CZK');renderActive();if(!qs('#entityModal').hidden)renderEntityModal();}
