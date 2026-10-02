@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-09-28T16:59:16Z",
-  "as_of": "2026-09-21",
+  "generated_at": "2026-10-02T12:39:42Z",
+  "as_of": "2026-09-28",
   "history_from": "2005-01-03",
   "currency": "EUR",
   "unit": "EUR/L",
   "observation_cadence": "weekly",
-  "observation_count": 28573,
+  "observation_count": 28600,
   "source": "European Commission Weekly Oil Bulletin (historical archive mirrored and flattened from the Commission series)",
   "source_url": "https://energy.ec.europa.eu/data-and-analysis/weekly-oil-bulletin_en",
   "archive_mirror_url": "https://huggingface.co/datasets/FionnHughes/eu-weekly-oil-bulletin/resolve/main/eu_oil_bulletin.csv",
@@ -14,121 +14,121 @@
     {
       "code": "AT",
       "name": "Austria",
-      "petrol95": 1.925,
-      "diesel": 2.238
+      "petrol95": 1.956,
+      "diesel": 2.259
     },
     {
       "code": "BE",
       "name": "Belgium",
-      "petrol95": 1.9876,
-      "diesel": 2.3866,
-      "lpg": 0.944
+      "petrol95": 2.0319,
+      "diesel": 2.4305,
+      "lpg": 0.972
     },
     {
       "code": "BG",
       "name": "Bulgaria",
-      "petrol95": 1.6634,
-      "diesel": 1.9156,
-      "lpg": 0.6756
+      "petrol95": 1.6748,
+      "diesel": 1.9277,
+      "lpg": 0.6828
     },
     {
       "code": "HR",
       "name": "Croatia",
-      "petrol95": 1.796,
-      "diesel": 1.975,
-      "lpg": 0.804
+      "petrol95": 1.8082,
+      "diesel": 2.0364,
+      "lpg": 0.824
     },
     {
       "code": "CY",
       "name": "Cyprus",
-      "petrol95": 1.6769,
-      "diesel": 1.9481
+      "petrol95": 1.733,
+      "diesel": 2.0229
     },
     {
       "code": "CZ",
       "name": "Czechia",
-      "petrol95": 1.884,
-      "diesel": 2.071,
-      "lpg": 0.8892
+      "petrol95": 1.88,
+      "diesel": 2.076,
+      "lpg": 0.8862
     },
     {
       "code": "DK",
       "name": "Denmark",
-      "petrol95": 2.6179,
-      "diesel": 2.555
+      "petrol95": 2.6581,
+      "diesel": 2.5417
     },
     {
       "code": "EE",
       "name": "Estonia",
-      "petrol95": 1.917,
-      "diesel": 2.113,
+      "petrol95": 1.928,
+      "diesel": 2.239,
       "lpg": 0.986
     },
     {
       "code": "FI",
       "name": "Finland",
-      "petrol95": 2.3636,
-      "diesel": 2.5554
+      "petrol95": 2.3311,
+      "diesel": 2.523
     },
     {
       "code": "FR",
       "name": "France",
-      "petrol95": 2.2192,
-      "diesel": 2.3834,
-      "lpg": 1.0125
+      "petrol95": 2.2128,
+      "diesel": 2.3706,
+      "lpg": 1.012
     },
     {
       "code": "DE",
       "name": "Germany",
-      "petrol95": 2.348,
-      "diesel": 2.457,
-      "lpg": 1.109
+      "petrol95": 2.345,
+      "diesel": 2.437,
+      "lpg": 1.117
     },
     {
       "code": "GR",
       "name": "Greece",
-      "petrol95": 2.197,
-      "diesel": 2.224
+      "petrol95": 2.205,
+      "diesel": 2.216
     },
     {
       "code": "HU",
       "name": "Hungary",
-      "petrol95": 1.7519,
-      "diesel": 1.9568,
-      "lpg": 0.9714
+      "petrol95": 1.7293,
+      "diesel": 1.9323,
+      "lpg": 0.9845
     },
     {
       "code": "IE",
       "name": "Ireland",
-      "petrol95": 1.9446,
-      "diesel": 2.0497
+      "petrol95": 1.9719,
+      "diesel": 2.1229
     },
     {
       "code": "IT",
       "name": "Italy",
-      "petrol95": 2.1412,
-      "diesel": 2.2814,
-      "lpg": 0.7702
+      "petrol95": 2.1562,
+      "diesel": 2.3507,
+      "lpg": 0.77
     },
     {
       "code": "LV",
       "name": "Latvia",
-      "petrol95": 1.9972,
-      "diesel": 2.1685,
-      "lpg": 0.9433
+      "petrol95": 2.0378,
+      "diesel": 2.1325,
+      "lpg": 0.9435
     },
     {
       "code": "LT",
       "name": "Lithuania",
-      "petrol95": 1.9499,
-      "diesel": 2.2576,
-      "lpg": 0.8086
+      "petrol95": 1.9537,
+      "diesel": 2.2529,
+      "lpg": 0.8156
     },
     {
       "code": "LU",
       "name": "Luxembourg",
-      "petrol95": 1.849,
-      "diesel": 2.114,
+      "petrol95": 1.888,
+      "diesel": 2.095,
       "lpg": 0.83
     },
     {
@@ -140,57 +140,57 @@
     {
       "code": "NL",
       "name": "Netherlands",
-      "petrol95": 2.4488,
-      "diesel": 2.579,
-      "lpg": 0.9463
+      "petrol95": 2.4646,
+      "diesel": 2.526,
+      "lpg": 0.9556
     },
     {
       "code": "PL",
       "name": "Poland",
-      "petrol95": 1.8198,
-      "diesel": 2.0391,
-      "lpg": 0.7214
+      "petrol95": 1.8527,
+      "diesel": 2.0603,
+      "lpg": 0.7464
     },
     {
       "code": "PT",
       "name": "Portugal",
-      "petrol95": 2.107,
-      "diesel": 2.21,
+      "petrol95": 2.099,
+      "diesel": 2.186,
       "lpg": 0.896
     },
     {
       "code": "RO",
       "name": "Romania",
-      "petrol95": 1.891,
-      "diesel": 2.0926,
-      "lpg": 0.8964
+      "petrol95": 1.8973,
+      "diesel": 2.1043,
+      "lpg": 0.8949
     },
     {
       "code": "SK",
       "name": "Slovakia",
       "petrol95": 1.853,
-      "diesel": 1.95,
+      "diesel": 1.978,
       "lpg": 0.801
     },
     {
       "code": "SI",
       "name": "Slovenia",
-      "petrol95": 1.7064,
-      "diesel": 1.9753,
-      "lpg": 0.9892
+      "petrol95": 1.7445,
+      "diesel": 2.011,
+      "lpg": 0.9843
     },
     {
       "code": "ES",
       "name": "Spain",
-      "petrol95": 1.928,
-      "diesel": 1.9181,
-      "lpg": 1.1031
+      "petrol95": 1.9397,
+      "diesel": 1.9344,
+      "lpg": 1.1022
     },
     {
       "code": "SE",
       "name": "Sweden",
-      "petrol95": 1.5792,
-      "diesel": 2.0902
+      "petrol95": 1.5948,
+      "diesel": 2.1352
     }
   ],
   "transport_note": "Machine-readable archive from a cleaned mirror of the European Commission Weekly Oil Bulletin; official workbook was unavailable or could not be parsed during this refresh.",
@@ -5615,6 +5615,11 @@
         "date": "2026-09-21",
         "diesel": 2.238,
         "petrol95": 1.925
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 2.259,
+        "petrol95": 1.956
       }
     ],
     "BE": [
@@ -12121,6 +12126,12 @@
         "diesel": 2.3866,
         "lpg": 0.944,
         "petrol95": 1.9876
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 2.4305,
+        "lpg": 0.972,
+        "petrol95": 2.0319
       }
     ],
     "CY": [
@@ -17548,6 +17559,11 @@
         "date": "2026-09-21",
         "diesel": 1.9481,
         "petrol95": 1.6769
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 2.0229,
+        "petrol95": 1.733
       }
     ],
     "CZ": [
@@ -24054,6 +24070,12 @@
         "diesel": 2.071,
         "lpg": 0.8892,
         "petrol95": 1.884
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 2.076,
+        "lpg": 0.8862,
+        "petrol95": 1.88
       }
     ],
     "DE": [
@@ -30566,6 +30588,12 @@
         "diesel": 2.457,
         "lpg": 1.109,
         "petrol95": 2.348
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 2.437,
+        "lpg": 1.117,
+        "petrol95": 2.345
       }
     ],
     "DK": [
@@ -35993,6 +36021,11 @@
         "date": "2026-09-21",
         "diesel": 2.555,
         "petrol95": 2.6179
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 2.5417,
+        "petrol95": 2.6581
       }
     ],
     "EE": [
@@ -42499,6 +42532,12 @@
         "diesel": 2.113,
         "lpg": 0.986,
         "petrol95": 1.917
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 2.239,
+        "lpg": 0.986,
+        "petrol95": 1.928
       }
     ],
     "ES": [
@@ -49004,6 +49043,12 @@
         "diesel": 1.9181,
         "lpg": 1.1031,
         "petrol95": 1.928
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 1.9344,
+        "lpg": 1.1022,
+        "petrol95": 1.9397
       }
     ],
     "FI": [
@@ -54431,6 +54476,11 @@
         "date": "2026-09-21",
         "diesel": 2.5554,
         "petrol95": 2.3636
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 2.523,
+        "petrol95": 2.3311
       }
     ],
     "FR": [
@@ -60943,6 +60993,12 @@
         "diesel": 2.3834,
         "lpg": 1.0125,
         "petrol95": 2.2192
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 2.3706,
+        "lpg": 1.012,
+        "petrol95": 2.2128
       }
     ],
     "GR": [
@@ -66365,6 +66421,11 @@
         "date": "2026-09-21",
         "diesel": 2.224,
         "petrol95": 2.197
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 2.216,
+        "petrol95": 2.205
       }
     ],
     "HU": [
@@ -72877,6 +72938,12 @@
         "diesel": 1.9568,
         "lpg": 0.9714,
         "petrol95": 1.7519
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 1.9323,
+        "lpg": 0.9845,
+        "petrol95": 1.7293
       }
     ],
     "IE": [
@@ -78304,6 +78371,11 @@
         "date": "2026-09-21",
         "diesel": 2.0497,
         "petrol95": 1.9446
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 2.1229,
+        "petrol95": 1.9719
       }
     ],
     "IT": [
@@ -84810,6 +84882,12 @@
         "diesel": 2.2814,
         "lpg": 0.7702,
         "petrol95": 2.1412
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 2.3507,
+        "lpg": 0.77,
+        "petrol95": 2.1562
       }
     ],
     "LT": [
@@ -91322,6 +91400,12 @@
         "diesel": 2.2576,
         "lpg": 0.8086,
         "petrol95": 1.9499
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 2.2529,
+        "lpg": 0.8156,
+        "petrol95": 1.9537
       }
     ],
     "LU": [
@@ -97834,6 +97918,12 @@
         "diesel": 2.114,
         "lpg": 0.83,
         "petrol95": 1.849
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 2.095,
+        "lpg": 0.83,
+        "petrol95": 1.888
       }
     ],
     "LV": [
@@ -104346,6 +104436,12 @@
         "diesel": 2.1685,
         "lpg": 0.9433,
         "petrol95": 1.9972
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 2.1325,
+        "lpg": 0.9435,
+        "petrol95": 2.0378
       }
     ],
     "MT": [
@@ -109766,6 +109862,11 @@
       },
       {
         "date": "2026-09-21",
+        "diesel": 1.21,
+        "petrol95": 1.34
+      },
+      {
+        "date": "2026-09-28",
         "diesel": 1.21,
         "petrol95": 1.34
       }
@@ -116280,6 +116381,12 @@
         "diesel": 2.579,
         "lpg": 0.9463,
         "petrol95": 2.4488
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 2.526,
+        "lpg": 0.9556,
+        "petrol95": 2.4646
       }
     ],
     "PL": [
@@ -122792,6 +122899,12 @@
         "diesel": 2.0391,
         "lpg": 0.7214,
         "petrol95": 1.8198
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 2.0603,
+        "lpg": 0.7464,
+        "petrol95": 1.8527
       }
     ],
     "PT": [
@@ -129304,6 +129417,12 @@
         "diesel": 2.21,
         "lpg": 0.896,
         "petrol95": 2.107
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 2.186,
+        "lpg": 0.896,
+        "petrol95": 2.099
       }
     ],
     "SE": [
@@ -134731,6 +134850,11 @@
         "date": "2026-09-21",
         "diesel": 2.0902,
         "petrol95": 1.5792
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 2.1352,
+        "petrol95": 1.5948
       }
     ],
     "SI": [
@@ -141243,6 +141367,12 @@
         "diesel": 1.9753,
         "lpg": 0.9892,
         "petrol95": 1.7064
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 2.011,
+        "lpg": 0.9843,
+        "petrol95": 1.7445
       }
     ],
     "SK": [
@@ -147755,6 +147885,12 @@
         "diesel": 1.95,
         "lpg": 0.801,
         "petrol95": 1.853
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 1.978,
+        "lpg": 0.801,
+        "petrol95": 1.853
       }
     ],
     "BG": [
@@ -153379,6 +153515,12 @@
         "diesel": 1.9156,
         "lpg": 0.6756,
         "petrol95": 1.6634
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 1.9277,
+        "lpg": 0.6828,
+        "petrol95": 1.6748
       }
     ],
     "RO": [
@@ -159009,6 +159151,12 @@
         "diesel": 2.0926,
         "lpg": 0.8964,
         "petrol95": 1.891
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 2.1043,
+        "lpg": 0.8949,
+        "petrol95": 1.8973
       }
     ],
     "HR": [
@@ -163013,6 +163161,12 @@
         "diesel": 1.975,
         "lpg": 0.804,
         "petrol95": 1.796
+      },
+      {
+        "date": "2026-09-28",
+        "diesel": 2.0364,
+        "lpg": 0.824,
+        "petrol95": 1.8082
       }
     ]
   }

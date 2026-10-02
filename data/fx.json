@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-28T16:59:16Z",
-  "as_of": "2026-09-28",
+  "generated_at": "2026-10-02T12:39:42Z",
+  "as_of": "2026-10-01",
   "history_from": "2005-01-03",
   "source": "ECB reference exchange rates",
   "source_url": "https://data.ecb.europa.eu/data/datasets/EXR",
@@ -22264,6 +22264,18 @@
     {
       "date": "2026-09-28",
       "value": 24.397
+    },
+    {
+      "date": "2026-09-29",
+      "value": 24.411
+    },
+    {
+      "date": "2026-09-30",
+      "value": 24.44
+    },
+    {
+      "date": "2026-10-01",
+      "value": 24.459
     }
   ],
   "usd_czk": [
@@ -44526,6 +44538,18 @@
     {
       "date": "2026-09-28",
       "value": 21.44225699
+    },
+    {
+      "date": "2026-09-29",
+      "value": 21.49801849
+    },
+    {
+      "date": "2026-09-30",
+      "value": 21.5235579
+    },
+    {
+      "date": "2026-10-01",
+      "value": 21.64896442
     }
   ]
 }
