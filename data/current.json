@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-10-02T12:39:42Z",
+  "generated_at": "2026-10-09T13:21:28Z",
   "notes": "Each refresh rebuilds the full published historical archive for the primary sources; the first post-deployment refresh is a deliberate historical backfill, not just a current-value update.",
   "fuel": {
-    "as_of": "2026-09-28",
+    "as_of": "2026-10-05",
     "history_from": "2005-01-03",
     "currency": "EUR",
     "unit": "EUR/L",
     "observation_cadence": "weekly",
-    "observation_count": 28600,
+    "observation_count": 28627,
     "source": "European Commission Weekly Oil Bulletin (historical archive mirrored and flattened from the Commission series)",
     "source_url": "https://energy.ec.europa.eu/data-and-analysis/weekly-oil-bulletin_en",
     "archive_mirror_url": "https://huggingface.co/datasets/FionnHughes/eu-weekly-oil-bulletin/resolve/main/eu_oil_bulletin.csv",
@@ -16,121 +16,121 @@
       {
         "code": "AT",
         "name": "Austria",
-        "petrol95": 1.956,
-        "diesel": 2.259
+        "petrol95": 1.837,
+        "diesel": 2.138
       },
       {
         "code": "BE",
         "name": "Belgium",
-        "petrol95": 2.0319,
-        "diesel": 2.4305,
-        "lpg": 0.972
+        "petrol95": 1.9585,
+        "diesel": 2.3488,
+        "lpg": 0.982
       },
       {
         "code": "BG",
         "name": "Bulgaria",
-        "petrol95": 1.6748,
-        "diesel": 1.9277,
-        "lpg": 0.6828
+        "petrol95": 1.6628,
+        "diesel": 1.8929,
+        "lpg": 0.6329
       },
       {
         "code": "HR",
         "name": "Croatia",
-        "petrol95": 1.8082,
-        "diesel": 2.0364,
-        "lpg": 0.824
+        "petrol95": 1.8265,
+        "diesel": 1.9839,
+        "lpg": 0.892
       },
       {
         "code": "CY",
         "name": "Cyprus",
-        "petrol95": 1.733,
-        "diesel": 2.0229
+        "petrol95": 1.7437,
+        "diesel": 2.0299
       },
       {
         "code": "CZ",
         "name": "Czechia",
-        "petrol95": 1.88,
-        "diesel": 2.076,
-        "lpg": 0.8862
+        "petrol95": 1.8467,
+        "diesel": 1.9521,
+        "lpg": 0.8895
       },
       {
         "code": "DK",
         "name": "Denmark",
-        "petrol95": 2.6581,
-        "diesel": 2.5417
+        "petrol95": 2.6049,
+        "diesel": 2.4885
       },
       {
         "code": "EE",
         "name": "Estonia",
-        "petrol95": 1.928,
-        "diesel": 2.239,
+        "petrol95": 1.945,
+        "diesel": 2.096,
         "lpg": 0.986
       },
       {
         "code": "FI",
         "name": "Finland",
-        "petrol95": 2.3311,
-        "diesel": 2.523
+        "petrol95": 2.3701,
+        "diesel": 2.5529
       },
       {
         "code": "FR",
         "name": "France",
-        "petrol95": 2.2128,
-        "diesel": 2.3706,
-        "lpg": 1.012
+        "petrol95": 2.2117,
+        "diesel": 2.3555,
+        "lpg": 1.0139
       },
       {
         "code": "DE",
         "name": "Germany",
-        "petrol95": 2.345,
-        "diesel": 2.437,
-        "lpg": 1.117
+        "petrol95": 2.137,
+        "diesel": 2.244,
+        "lpg": 1.109
       },
       {
         "code": "GR",
         "name": "Greece",
-        "petrol95": 2.205,
-        "diesel": 2.216
+        "petrol95": 2.203,
+        "diesel": 2.166
       },
       {
         "code": "HU",
         "name": "Hungary",
-        "petrol95": 1.7293,
-        "diesel": 1.9323,
-        "lpg": 0.9845
+        "petrol95": 1.7256,
+        "diesel": 1.9281,
+        "lpg": 0.9839
       },
       {
         "code": "IE",
         "name": "Ireland",
-        "petrol95": 1.9719,
-        "diesel": 2.1229
+        "petrol95": 1.9827,
+        "diesel": 2.1637
       },
       {
         "code": "IT",
         "name": "Italy",
-        "petrol95": 2.1562,
-        "diesel": 2.3507,
-        "lpg": 0.77
+        "petrol95": 2.0727,
+        "diesel": 2.2735,
+        "lpg": 0.7706
       },
       {
         "code": "LV",
         "name": "Latvia",
-        "petrol95": 2.0378,
-        "diesel": 2.1325,
-        "lpg": 0.9435
+        "petrol95": 1.9624,
+        "diesel": 2.1203,
+        "lpg": 0.9483
       },
       {
         "code": "LT",
         "name": "Lithuania",
-        "petrol95": 1.9537,
-        "diesel": 2.2529,
-        "lpg": 0.8156
+        "petrol95": 1.938,
+        "diesel": 2.2407,
+        "lpg": 0.8217
       },
       {
         "code": "LU",
         "name": "Luxembourg",
-        "petrol95": 1.888,
-        "diesel": 2.095,
+        "petrol95": 1.837,
+        "diesel": 2.057,
         "lpg": 0.83
       },
       {
@@ -142,57 +142,57 @@
       {
         "code": "NL",
         "name": "Netherlands",
-        "petrol95": 2.4646,
-        "diesel": 2.526,
-        "lpg": 0.9556
+        "petrol95": 2.4318,
+        "diesel": 2.5061,
+        "lpg": 0.9547
       },
       {
         "code": "PL",
         "name": "Poland",
-        "petrol95": 1.8527,
-        "diesel": 2.0603,
-        "lpg": 0.7464
+        "petrol95": 1.5196,
+        "diesel": 1.7645,
+        "lpg": 0.7401
       },
       {
         "code": "PT",
         "name": "Portugal",
-        "petrol95": 2.099,
-        "diesel": 2.186,
-        "lpg": 0.896
+        "petrol95": 2.081,
+        "diesel": 2.155,
+        "lpg": 0.922
       },
       {
         "code": "RO",
         "name": "Romania",
-        "petrol95": 1.8973,
-        "diesel": 2.1043,
-        "lpg": 0.8949
+        "petrol95": 2.1169,
+        "diesel": 2.0496,
+        "lpg": 1.0888
       },
       {
         "code": "SK",
         "name": "Slovakia",
-        "petrol95": 1.853,
-        "diesel": 1.978,
-        "lpg": 0.801
+        "petrol95": 1.845,
+        "diesel": 1.972,
+        "lpg": 0.818
       },
       {
         "code": "SI",
         "name": "Slovenia",
-        "petrol95": 1.7445,
-        "diesel": 2.011,
-        "lpg": 0.9843
+        "petrol95": 1.7631,
+        "diesel": 1.9815,
+        "lpg": 0.9837
       },
       {
         "code": "ES",
         "name": "Spain",
-        "petrol95": 1.9397,
-        "diesel": 1.9344,
-        "lpg": 1.1022
+        "petrol95": 1.8491,
+        "diesel": 1.9176,
+        "lpg": 1.0997
       },
       {
         "code": "SE",
         "name": "Sweden",
-        "petrol95": 1.5948,
-        "diesel": 2.1352
+        "petrol95": 1.5893,
+        "diesel": 2.1179
       }
     ],
     "transport_note": "Machine-readable archive from a cleaned mirror of the European Commission Weekly Oil Bulletin; official workbook was unavailable or could not be parsed during this refresh.",
@@ -203,7 +203,7 @@
     }
   },
   "czech_regions": {
-    "as_of": "2026-10-02",
+    "as_of": "2026-10-09",
     "history_from": "2026-09-09",
     "source": "cenaPHM.cz regional public feed (secondary Czech fuel-price source; cites Czech Statistical Office data)",
     "source_url": "https://cenaphm.cz/data.json",
@@ -475,12 +475,101 @@
             "diesel": 49.58
           }
         ]
+      },
+      {
+        "as_of": "2026-10-09",
+        "regions": [
+          {
+            "code": "CZ010",
+            "name": "Praha",
+            "petrol95": 46.14,
+            "diesel": 50.54
+          },
+          {
+            "code": "CZ020",
+            "name": "Středočeský kraj",
+            "petrol95": 45.56,
+            "diesel": 49.92
+          },
+          {
+            "code": "CZ031",
+            "name": "Jihočeský kraj",
+            "petrol95": 45.05,
+            "diesel": 49.39
+          },
+          {
+            "code": "CZ032",
+            "name": "Plzeňský kraj",
+            "petrol95": 45.24,
+            "diesel": 49.48
+          },
+          {
+            "code": "CZ041",
+            "name": "Karlovarský kraj",
+            "petrol95": 45.49,
+            "diesel": 49.91
+          },
+          {
+            "code": "CZ042",
+            "name": "Ústecký kraj",
+            "petrol95": 45.34,
+            "diesel": 49.55
+          },
+          {
+            "code": "CZ051",
+            "name": "Liberecký kraj",
+            "petrol95": 45.27,
+            "diesel": 49.68
+          },
+          {
+            "code": "CZ052",
+            "name": "Královéhradecký kraj",
+            "petrol95": 45.32,
+            "diesel": 49.6
+          },
+          {
+            "code": "CZ053",
+            "name": "Pardubický kraj",
+            "petrol95": 45.33,
+            "diesel": 49.59
+          },
+          {
+            "code": "CZ063",
+            "name": "Vysočina",
+            "petrol95": 45.42,
+            "diesel": 49.69
+          },
+          {
+            "code": "CZ064",
+            "name": "Jihomoravský kraj",
+            "petrol95": 45.48,
+            "diesel": 49.66
+          },
+          {
+            "code": "CZ071",
+            "name": "Olomoucký kraj",
+            "petrol95": 45.41,
+            "diesel": 49.71
+          },
+          {
+            "code": "CZ072",
+            "name": "Zlínský kraj",
+            "petrol95": 45.31,
+            "diesel": 49.5
+          },
+          {
+            "code": "CZ080",
+            "name": "Moravskoslezský kraj",
+            "petrol95": 45.33,
+            "diesel": 49.58
+          }
+        ]
       }
     ],
     "notes": "The current regional feed exposes an LPG field but currently reports zero for all regions; zeros are intentionally treated as not reported rather than as prices."
   },
   "natural_gas": {
-    "as_of": "2025-S2",
+    "as_of": "2026-S1",
     "history_from": "2007-S1",
     "unit": "EUR/kWh",
     "band": "D2 (20–199 GJ/year)",
@@ -491,57 +580,57 @@
       {
         "code": "AT",
         "name": "Austria",
-        "price": 0.1221
+        "price": 0.124
       },
       {
         "code": "BE",
         "name": "Belgium",
-        "price": 0.0898
+        "price": 0.0846
       },
       {
         "code": "BG",
         "name": "Bulgaria",
-        "price": 0.0648
+        "price": 0.0654
       },
       {
         "code": "HR",
         "name": "Croatia",
-        "price": 0.0543
+        "price": 0.0502
       },
       {
         "code": "CZ",
         "name": "Czechia",
-        "price": 0.0961
+        "price": 0.0901
       },
       {
         "code": "DK",
         "name": "Denmark",
-        "price": 0.1257
+        "price": 0.1211
       },
       {
         "code": "EE",
         "name": "Estonia",
-        "price": 0.076
+        "price": 0.0796
       },
       {
         "code": "FR",
         "name": "France",
-        "price": 0.1436
+        "price": 0.1347
       },
       {
         "code": "DE",
         "name": "Germany",
-        "price": 0.1223
+        "price": 0.1156
       },
       {
         "code": "HU",
         "name": "Hungary",
-        "price": 0.0335
+        "price": 0.033
       },
       {
         "code": "IE",
         "name": "Ireland",
-        "price": 0.13
+        "price": 0.1183
       },
       {
         "code": "IT",
@@ -551,22 +640,22 @@
       {
         "code": "LV",
         "name": "Latvia",
-        "price": 0.0826
+        "price": 0.0812
       },
       {
         "code": "LT",
         "name": "Lithuania",
-        "price": 0.0684
+        "price": 0.0629
       },
       {
         "code": "LU",
         "name": "Luxembourg",
-        "price": 0.0891
+        "price": 0.0859
       },
       {
         "code": "NL",
         "name": "Netherlands",
-        "price": 0.1719
+        "price": 0.1622
       },
       {
         "code": "PL",
@@ -576,32 +665,32 @@
       {
         "code": "PT",
         "name": "Portugal",
-        "price": 0.1405
+        "price": 0.1256
       },
       {
         "code": "RO",
         "name": "Romania",
-        "price": 0.0566
+        "price": 0.0594
       },
       {
         "code": "SK",
         "name": "Slovakia",
-        "price": 0.0608
+        "price": 0.0626
       },
       {
         "code": "SI",
         "name": "Slovenia",
-        "price": 0.0871
+        "price": 0.0859
       },
       {
         "code": "ES",
         "name": "Spain",
-        "price": 0.0955
+        "price": 0.0787
       },
       {
         "code": "SE",
         "name": "Sweden",
-        "price": 0.2092
+        "price": 0.2201
       },
       {
         "code": "EU27",
@@ -611,15 +700,15 @@
     ]
   },
   "brent": {
-    "as_of": "2026-09-29",
+    "as_of": "2026-10-06",
     "history_from": "1987-05-20",
     "unit": "USD/barrel",
     "source": "U.S. Energy Information Administration via FRED, DCOILBRENTEU",
     "source_url": "https://fred.stlouisfed.org/series/DCOILBRENTEU",
-    "latest": 113.96
+    "latest": 125.44
   },
   "fx": {
-    "as_of": "2026-10-01",
+    "as_of": "2026-10-08",
     "history_from": "2005-01-03",
     "source": "ECB reference exchange rates",
     "source_url": "https://data.ecb.europa.eu/data/datasets/EXR"

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-02T12:39:42Z",
+  "generated_at": "2026-10-09T13:21:28Z",
   "history": {
     "EU27": [
       {
@@ -303,6 +303,10 @@
       {
         "period": "2025-S2",
         "value": 0.0898
+      },
+      {
+        "period": "2026-S1",
+        "value": 0.0846
       }
     ],
     "BG": [
@@ -453,6 +457,10 @@
       {
         "period": "2025-S2",
         "value": 0.0648
+      },
+      {
+        "period": "2026-S1",
+        "value": 0.0654
       }
     ],
     "CZ": [
@@ -603,6 +611,10 @@
       {
         "period": "2025-S2",
         "value": 0.0961
+      },
+      {
+        "period": "2026-S1",
+        "value": 0.0901
       }
     ],
     "DK": [
@@ -757,6 +769,10 @@
       {
         "period": "2025-S2",
         "value": 0.1257
+      },
+      {
+        "period": "2026-S1",
+        "value": 0.1211
       }
     ],
     "DE": [
@@ -907,6 +923,10 @@
       {
         "period": "2025-S2",
         "value": 0.1223
+      },
+      {
+        "period": "2026-S1",
+        "value": 0.1156
       }
     ],
     "EE": [
@@ -1057,6 +1077,10 @@
       {
         "period": "2025-S2",
         "value": 0.076
+      },
+      {
+        "period": "2026-S1",
+        "value": 0.0796
       }
     ],
     "IE": [
@@ -1207,6 +1231,10 @@
       {
         "period": "2025-S2",
         "value": 0.13
+      },
+      {
+        "period": "2026-S1",
+        "value": 0.1183
       }
     ],
     "ES": [
@@ -1357,6 +1385,10 @@
       {
         "period": "2025-S2",
         "value": 0.0955
+      },
+      {
+        "period": "2026-S1",
+        "value": 0.0787
       }
     ],
     "FR": [
@@ -1507,6 +1539,10 @@
       {
         "period": "2025-S2",
         "value": 0.1436
+      },
+      {
+        "period": "2026-S1",
+        "value": 0.1347
       }
     ],
     "HR": [
@@ -1661,6 +1697,10 @@
       {
         "period": "2025-S2",
         "value": 0.0543
+      },
+      {
+        "period": "2026-S1",
+        "value": 0.0502
       }
     ],
     "IT": [
@@ -1965,6 +2005,10 @@
       {
         "period": "2025-S2",
         "value": 0.0826
+      },
+      {
+        "period": "2026-S1",
+        "value": 0.0812
       }
     ],
     "LT": [
@@ -2115,6 +2159,10 @@
       {
         "period": "2025-S2",
         "value": 0.0684
+      },
+      {
+        "period": "2026-S1",
+        "value": 0.0629
       }
     ],
     "LU": [
@@ -2265,6 +2313,10 @@
       {
         "period": "2025-S2",
         "value": 0.0891
+      },
+      {
+        "period": "2026-S1",
+        "value": 0.0859
       }
     ],
     "HU": [
@@ -2415,6 +2467,10 @@
       {
         "period": "2025-S2",
         "value": 0.0335
+      },
+      {
+        "period": "2026-S1",
+        "value": 0.033
       }
     ],
     "NL": [
@@ -2564,11 +2620,15 @@
       },
       {
         "period": "2025-S1",
-        "value": 0.1616
+        "value": 0.1614
       },
       {
         "period": "2025-S2",
-        "value": 0.1719
+        "value": 0.1714
+      },
+      {
+        "period": "2026-S1",
+        "value": 0.1622
       }
     ],
     "AT": [
@@ -2719,6 +2779,10 @@
       {
         "period": "2025-S2",
         "value": 0.1221
+      },
+      {
+        "period": "2026-S1",
+        "value": 0.124
       }
     ],
     "PL": [
@@ -3003,6 +3067,10 @@
       {
         "period": "2025-S2",
         "value": 0.1405
+      },
+      {
+        "period": "2026-S1",
+        "value": 0.1256
       }
     ],
     "RO": [
@@ -3153,6 +3221,10 @@
       {
         "period": "2025-S2",
         "value": 0.0566
+      },
+      {
+        "period": "2026-S1",
+        "value": 0.0594
       }
     ],
     "SI": [
@@ -3303,6 +3375,10 @@
       {
         "period": "2025-S2",
         "value": 0.0871
+      },
+      {
+        "period": "2026-S1",
+        "value": 0.0859
       }
     ],
     "SK": [
@@ -3453,6 +3529,10 @@
       {
         "period": "2025-S2",
         "value": 0.0608
+      },
+      {
+        "period": "2026-S1",
+        "value": 0.0626
       }
     ],
     "SE": [
@@ -3607,10 +3687,14 @@
       {
         "period": "2025-S2",
         "value": 0.2092
+      },
+      {
+        "period": "2026-S1",
+        "value": 0.2201
       }
     ]
   },
-  "as_of": "2025-S2",
+  "as_of": "2026-S1",
   "history_from": "2007-S1",
   "unit": "EUR/kWh",
   "band": "D2 (20–199 GJ/year)",
@@ -3621,57 +3705,57 @@
     {
       "code": "AT",
       "name": "Austria",
-      "price": 0.1221
+      "price": 0.124
     },
     {
       "code": "BE",
       "name": "Belgium",
-      "price": 0.0898
+      "price": 0.0846
     },
     {
       "code": "BG",
       "name": "Bulgaria",
-      "price": 0.0648
+      "price": 0.0654
     },
     {
       "code": "HR",
       "name": "Croatia",
-      "price": 0.0543
+      "price": 0.0502
     },
     {
       "code": "CZ",
       "name": "Czechia",
-      "price": 0.0961
+      "price": 0.0901
     },
     {
       "code": "DK",
       "name": "Denmark",
-      "price": 0.1257
+      "price": 0.1211
     },
     {
       "code": "EE",
       "name": "Estonia",
-      "price": 0.076
+      "price": 0.0796
     },
     {
       "code": "FR",
       "name": "France",
-      "price": 0.1436
+      "price": 0.1347
     },
     {
       "code": "DE",
       "name": "Germany",
-      "price": 0.1223
+      "price": 0.1156
     },
     {
       "code": "HU",
       "name": "Hungary",
-      "price": 0.0335
+      "price": 0.033
     },
     {
       "code": "IE",
       "name": "Ireland",
-      "price": 0.13
+      "price": 0.1183
     },
     {
       "code": "IT",
@@ -3681,22 +3765,22 @@
     {
       "code": "LV",
       "name": "Latvia",
-      "price": 0.0826
+      "price": 0.0812
     },
     {
       "code": "LT",
       "name": "Lithuania",
-      "price": 0.0684
+      "price": 0.0629
     },
     {
       "code": "LU",
       "name": "Luxembourg",
-      "price": 0.0891
+      "price": 0.0859
     },
     {
       "code": "NL",
       "name": "Netherlands",
-      "price": 0.1719
+      "price": 0.1622
     },
     {
       "code": "PL",
@@ -3706,32 +3790,32 @@
     {
       "code": "PT",
       "name": "Portugal",
-      "price": 0.1405
+      "price": 0.1256
     },
     {
       "code": "RO",
       "name": "Romania",
-      "price": 0.0566
+      "price": 0.0594
     },
     {
       "code": "SK",
       "name": "Slovakia",
-      "price": 0.0608
+      "price": 0.0626
     },
     {
       "code": "SI",
       "name": "Slovenia",
-      "price": 0.0871
+      "price": 0.0859
     },
     {
       "code": "ES",
       "name": "Spain",
-      "price": 0.0955
+      "price": 0.0787
     },
     {
       "code": "SE",
       "name": "Sweden",
-      "price": 0.2092
+      "price": 0.2201
     },
     {
       "code": "EU27",
