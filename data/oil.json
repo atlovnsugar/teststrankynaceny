@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-10-09T13:21:28Z",
-  "as_of": "2026-10-06",
+  "generated_at": "2026-10-16T11:28:11Z",
+  "as_of": "2026-10-14",
   "history_from": "1987-05-20",
   "unit": "USD/barrel",
   "source": "U.S. Energy Information Administration via FRED, DCOILBRENTEU",
   "source_url": "https://fred.stlouisfed.org/series/DCOILBRENTEU",
-  "latest": 125.44,
+  "latest": 126.55,
   "history": [
     {
       "date": "1987-05-20",
@@ -36414,6 +36414,30 @@
     {
       "date": "2026-10-06",
       "value": 125.44
+    },
+    {
+      "date": "2026-10-07",
+      "value": 126.0
+    },
+    {
+      "date": "2026-10-08",
+      "value": 130.18
+    },
+    {
+      "date": "2026-10-09",
+      "value": 130.03
+    },
+    {
+      "date": "2026-10-12",
+      "value": 129.95
+    },
+    {
+      "date": "2026-10-13",
+      "value": 125.78
+    },
+    {
+      "date": "2026-10-14",
+      "value": 126.55
     }
   ]
 }
