@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-16T11:30:23Z",
+  "generated_at": "2026-10-23T11:46:31Z",
   "meta": {
     "history_from": "2008",
     "history_to": "2026",
@@ -705,33 +705,33 @@
         }
       },
       "2026": {
-        "total": 45220.285,
+        "total": 52445.041,
         "sources": {
-          "Renewables and biofuels": 9150.194,
-          "Nuclear fuels and other fuels n.e.c.": 8601.123,
-          "Fossil energy": 5183.056,
-          "Solar": 4443.651,
-          "Solar photovoltaic": 4443.651,
-          "Coal and manufactured gases": 3920.168,
-          "Hydro": 3339.673,
-          "Pure hydro power": 2762.996,
-          "Natural gas": 1125.822,
-          "Wind": 761.005,
-          "Wind on shore": 761.005,
-          "Mixed hydro power": 423.927,
-          "Pumped hydro power": 152.75,
-          "Oil and petroleum products (excluding biofuel portion)": 137.066,
-          "Other fuels n.e.c.": 14.198,
+          "Renewables and biofuels": 10678.26,
+          "Nuclear fuels and other fuels n.e.c.": 9967.889,
+          "Fossil energy": 5858.566,
+          "Solar": 5608.442,
+          "Solar photovoltaic": 5608.442,
+          "Coal and manufactured gases": 4487.047,
+          "Hydro": 3581.082,
+          "Pure hydro power": 2940.578,
+          "Natural gas": 1220.493,
+          "Wind": 843.938,
+          "Wind on shore": 843.938,
+          "Mixed hydro power": 459.916,
+          "Pumped hydro power": 180.588,
+          "Oil and petroleum products (excluding biofuel portion)": 151.026,
+          "Other fuels n.e.c.": 14.836,
           "Geothermal": 0.0,
           "Wind off shore": 0.0,
           "Solar thermal": 0.0,
           "Other renewable energies": 0.0
         },
         "shares": {
-          "renewable": 0.580245,
-          "fossil": 0.229236,
-          "nuclear": 0.190205,
-          "other": 0.000314
+          "renewable": 0.586236,
+          "fossil": 0.223417,
+          "nuclear": 0.190064,
+          "other": 0.000283
         }
       },
       "2008": {
@@ -1520,20 +1520,20 @@
         }
       },
       "2026": {
-        "total": 112613.651,
+        "total": 126860.617,
         "sources": {
-          "Renewables and biofuels": 34609.736,
-          "Hydro": 19138.587,
-          "Pure hydro power": 12017.607,
-          "Solar": 7576.461,
-          "Solar photovoltaic": 7576.461,
-          "Mixed hydro power": 7120.98,
-          "Fossil energy": 6991.329,
-          "Wind": 5535.217,
-          "Wind on shore": 5535.217,
-          "Natural gas": 5197.352,
-          "Coal and manufactured gases": 1004.627,
-          "Oil and petroleum products (excluding biofuel portion)": 310.077,
+          "Renewables and biofuels": 39307.331,
+          "Hydro": 21594.56,
+          "Pure hydro power": 13433.91,
+          "Solar": 8965.97,
+          "Solar photovoltaic": 8965.97,
+          "Mixed hydro power": 8160.65,
+          "Fossil energy": 7411.183,
+          "Wind": 6078.239,
+          "Wind on shore": 6078.239,
+          "Natural gas": 5375.136,
+          "Coal and manufactured gases": 1132.018,
+          "Oil and petroleum products (excluding biofuel portion)": 357.411,
           "Pumped hydro power": 0.0,
           "Geothermal": 0.0,
           "Wind off shore": 0.0,
@@ -1543,8 +1543,8 @@
           "Other fuels n.e.c.": 0.0
         },
         "shares": {
-          "renewable": 0.880091,
-          "fossil": 0.119909,
+          "renewable": 0.887469,
+          "fossil": 0.112531,
           "nuclear": 0.0,
           "other": 0.0
         }
@@ -2810,16 +2810,16 @@
         }
       },
       "2026": {
-        "total": 6253.345,
+        "total": 7147.97,
         "sources": {
-          "Renewables and biofuels": 2251.579,
-          "Solar": 871.1,
-          "Solar photovoltaic": 871.1,
-          "Fossil energy": 790.766,
-          "Wind": 720.9,
-          "Wind on shore": 720.9,
-          "Hydro": 13.5,
-          "Pure hydro power": 13.5,
+          "Renewables and biofuels": 2563.339,
+          "Solar": 1033.6,
+          "Solar photovoltaic": 1033.6,
+          "Fossil energy": 856.431,
+          "Wind": 816.1,
+          "Wind on shore": 816.1,
+          "Hydro": 14.4,
+          "Pure hydro power": 14.4,
           "Coal and manufactured gases": 0.0,
           "Natural gas": 0.0,
           "Oil and petroleum products (excluding biofuel portion)": 0.0,
@@ -2833,8 +2833,8 @@
           "Other fuels n.e.c.": 0.0
         },
         "shares": {
-          "renewable": 0.873545,
-          "fossil": 0.126455,
+          "renewable": 0.880185,
+          "fossil": 0.119815,
           "nuclear": 0.0,
           "other": 0.0
         }
@@ -4093,30 +4093,30 @@
         }
       },
       "2026": {
-        "total": 528996.743,
+        "total": 592129.109,
         "sources": {
-          "Nuclear fuels and other fuels n.e.c.": 219712.402,
-          "Renewables and biofuels": 99188.279,
-          "Hydro": 38811.601,
-          "Pure hydro power": 33649.657,
-          "Wind": 29310.093,
-          "Wind on shore": 29310.093,
-          "Solar": 25716.654,
-          "Solar photovoltaic": 25716.654,
-          "Fossil energy": 14429.946,
-          "Natural gas": 7921.822,
-          "Mixed hydro power": 3997.594,
-          "Pumped hydro power": 1164.349,
-          "Geothermal": 67.599,
+          "Nuclear fuels and other fuels n.e.c.": 245882.709,
+          "Renewables and biofuels": 110635.834,
+          "Hydro": 41938.414,
+          "Pure hydro power": 36360.606,
+          "Wind": 32316.457,
+          "Wind on shore": 32316.457,
+          "Solar": 30414.426,
+          "Solar photovoltaic": 30414.426,
+          "Fossil energy": 16663.953,
+          "Natural gas": 9530.761,
+          "Mixed hydro power": 4319.658,
+          "Pumped hydro power": 1258.152,
+          "Geothermal": 77.256,
           "Wind off shore": 0.0,
           "Solar thermal": 0.0,
           "Other renewable energies": 0.0,
           "Other fuels n.e.c.": 0.0
         },
         "shares": {
-          "renewable": 0.542409,
-          "fossil": 0.042253,
-          "nuclear": 0.415338,
+          "renewable": 0.54051,
+          "fossil": 0.044238,
+          "nuclear": 0.415252,
           "other": 0.0
         }
       },
@@ -5795,18 +5795,18 @@
         }
       },
       "2026": {
-        "total": 11670.0,
+        "total": 12709.0,
         "sources": {
-          "Renewables and biofuels": 3285.0,
-          "Hydro": 1729.0,
-          "Pure hydro power": 1729.0,
-          "Solar": 1146.0,
-          "Solar photovoltaic": 1146.0,
-          "Natural gas": 1122.0,
-          "Fossil energy": 1122.0,
-          "Wind": 178.0,
-          "Wind on shore": 178.0,
-          "Other fuels n.e.c.": 35.0,
+          "Renewables and biofuels": 3644.0,
+          "Hydro": 1809.0,
+          "Pure hydro power": 1809.0,
+          "Solar": 1367.0,
+          "Solar photovoltaic": 1367.0,
+          "Natural gas": 1123.0,
+          "Fossil energy": 1123.0,
+          "Wind": 212.0,
+          "Wind on shore": 212.0,
+          "Other fuels n.e.c.": 43.0,
           "Coal and manufactured gases": 0.0,
           "Oil and petroleum products (excluding biofuel portion)": 0.0,
           "Mixed hydro power": 0.0,
@@ -5818,10 +5818,10 @@
           "Nuclear fuels and other fuels n.e.c.": 0.0
         },
         "shares": {
-          "renewable": 0.804713,
-          "fossil": 0.192288,
+          "renewable": 0.819891,
+          "fossil": 0.176725,
           "nuclear": 0.0,
-          "other": 0.002999
+          "other": 0.003383
         }
       },
       "2008": {
@@ -6655,20 +6655,20 @@
         }
       },
       "2026": {
-        "total": 13074.367,
+        "total": 14718.883,
         "sources": {
-          "Renewables and biofuels": 3984.581,
-          "Wind": 2937.241,
-          "Wind on shore": 2937.241,
-          "Fossil energy": 688.836,
-          "Hydro": 516.747,
-          "Solar": 442.235,
-          "Solar photovoltaic": 442.235,
-          "Natural gas": 431.92,
-          "Pumped hydro power": 319.244,
-          "Pure hydro power": 197.503,
-          "Other fuels n.e.c.": 97.343,
-          "Oil and petroleum products (excluding biofuel portion)": 79.241,
+          "Renewables and biofuels": 4490.014,
+          "Wind": 3299.889,
+          "Wind on shore": 3299.889,
+          "Fossil energy": 740.437,
+          "Hydro": 588.712,
+          "Solar": 537.176,
+          "Solar photovoltaic": 537.176,
+          "Natural gas": 448.331,
+          "Pumped hydro power": 372.317,
+          "Pure hydro power": 216.395,
+          "Other fuels n.e.c.": 99.145,
+          "Oil and petroleum products (excluding biofuel portion)": 89.402,
           "Coal and manufactured gases": 0.0,
           "Mixed hydro power": 0.0,
           "Geothermal": 0.0,
@@ -6678,10 +6678,10 @@
           "Nuclear fuels and other fuels n.e.c.": 0.0
         },
         "shares": {
-          "renewable": 0.900772,
-          "fossil": 0.091782,
+          "renewable": 0.906425,
+          "fossil": 0.086839,
           "nuclear": 0.0,
-          "other": 0.007445
+          "other": 0.006736
         }
       },
       "2008": {
@@ -9644,20 +9644,20 @@
         }
       },
       "2026": {
-        "total": 23167.0,
+        "total": 26063.0,
         "sources": {
-          "Nuclear fuels and other fuels n.e.c.": 10620.0,
-          "Renewables and biofuels": 2951.0,
-          "Fossil energy": 2179.0,
-          "Hydro": 2010.0,
-          "Natural gas": 1800.0,
-          "Pure hydro power": 1629.0,
-          "Solar": 620.0,
-          "Solar photovoltaic": 620.0,
-          "Pumped hydro power": 381.0,
-          "Oil and petroleum products (excluding biofuel portion)": 221.0,
-          "Coal and manufactured gases": 123.0,
-          "Other fuels n.e.c.": 13.0,
+          "Nuclear fuels and other fuels n.e.c.": 11959.0,
+          "Renewables and biofuels": 3302.0,
+          "Fossil energy": 2452.0,
+          "Hydro": 2219.0,
+          "Natural gas": 2032.0,
+          "Pure hydro power": 1764.0,
+          "Solar": 744.0,
+          "Solar photovoltaic": 744.0,
+          "Pumped hydro power": 455.0,
+          "Oil and petroleum products (excluding biofuel portion)": 244.0,
+          "Coal and manufactured gases": 134.0,
+          "Other fuels n.e.c.": 14.0,
           "Mixed hydro power": 0.0,
           "Geothermal": 0.0,
           "Wind": 0.0,
@@ -9667,10 +9667,10 @@
           "Other renewable energies": 0.0
         },
         "shares": {
-          "renewable": 0.354427,
-          "fossil": 0.186602,
-          "nuclear": 0.458411,
-          "other": 0.000561
+          "renewable": 0.354065,
+          "fossil": 0.186548,
+          "nuclear": 0.45885,
+          "other": 0.000537
         }
       },
       "2008": {
@@ -10074,32 +10074,32 @@
         }
       },
       "2026": {
-        "total": 398001.955,
+        "total": 457820.459,
         "sources": {
-          "Renewables and biofuels": 97803.296,
-          "Solar": 37919.304,
-          "Fossil energy": 37043.227,
-          "Solar photovoltaic": 35323.842,
-          "Wind": 34962.725,
-          "Wind on shore": 34962.725,
-          "Nuclear fuels and other fuels n.e.c.": 30266.208,
-          "Natural gas": 29470.06,
-          "Hydro": 25308.953,
-          "Pure hydro power": 18925.002,
-          "Oil and petroleum products (excluding biofuel portion)": 6864.921,
-          "Mixed hydro power": 3456.305,
-          "Pumped hydro power": 2927.647,
-          "Solar thermal": 2595.462,
-          "Coal and manufactured gases": 172.278,
+          "Renewables and biofuels": 111420.042,
+          "Solar": 45868.442,
+          "Fossil energy": 44224.8,
+          "Solar photovoltaic": 42687.278,
+          "Wind": 38477.64,
+          "Wind on shore": 38477.64,
+          "Natural gas": 35421.555,
+          "Nuclear fuels and other fuels n.e.c.": 35038.323,
+          "Hydro": 27415.566,
+          "Pure hydro power": 20215.73,
+          "Oil and petroleum products (excluding biofuel portion)": 8005.529,
+          "Mixed hydro power": 3917.092,
+          "Pumped hydro power": 3282.745,
+          "Solar thermal": 3181.164,
+          "Coal and manufactured gases": 186.913,
           "Geothermal": 0.0,
           "Wind off shore": 0.0,
           "Other renewable energies": 0.0,
           "Other fuels n.e.c.": 0.0
         },
         "shares": {
-          "renewable": 0.739155,
-          "fossil": 0.184799,
-          "nuclear": 0.076045,
+          "renewable": 0.731604,
+          "fossil": 0.191863,
+          "nuclear": 0.076533,
           "other": 0.0
         }
       },
@@ -13261,6 +13261,10 @@
         {
           "period": "2025-S2",
           "value": 0.2452
+        },
+        {
+          "period": "2026-S1",
+          "value": 0.2415
         }
       ],
       "LT": [
